@@ -13,7 +13,7 @@ exports = Class(View, function (supr) {
 
         supr(this, 'init', [opts]);
 
-        var text = new TextView({
+        var _text = new TextView({
             superview: this,
             x: 0,
             y: 0,
@@ -23,7 +23,7 @@ exports = Class(View, function (supr) {
             color: "white"
         });
 
-        var startbutton = new View({
+        var _startbutton = new View({
             superview: this,
             x: 0,
             y: 0,
@@ -31,7 +31,7 @@ exports = Class(View, function (supr) {
             height: opts.height
         });
 
-        startbutton.on('InputSelect', bind(this, function () {
+        _startbutton.on('InputSelect', bind(this, function () {
             this.emit('TitleScene:start');
         }));
     };

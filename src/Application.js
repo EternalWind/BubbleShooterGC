@@ -18,12 +18,12 @@ exports = Class(GC.Application, function () {
 
         var scale = device.width / 320;
 
-        var title = new TitleScene(appSettings);
-        var game = new GameScene(appSettings);
+        var _title = new TitleScene(appSettings);
+        var _game = new GameScene(appSettings);
 
         this.view.style.backgroundColor = "#000000";
 
-        var rootView = new StackView({
+        var _rootView = new StackView({
             superview: this,
             x: 0,
             y: (device.height - appSettings.height * scale) / 2,
@@ -33,11 +33,11 @@ exports = Class(GC.Application, function () {
             scale: device.width / 320
         });
 
-        rootView.push(title);
+        _rootView.push(_title);
 
-        title.on("TitleScene:start", function() {
-            rootView.push(game);
-            game.emit("Application:kickoff");
+        _title.on("TitleScene:start", function() {
+            _rootView.push(_game);
+            _game.emit("Application:kickoff");
         });
     };
 
