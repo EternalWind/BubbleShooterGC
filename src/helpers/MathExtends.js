@@ -8,7 +8,8 @@ exports = {
     screen_to_cube: screen_to_cube,
     cube_to_grid: cube_to_grid,
     screen_to_grid: screen_to_grid,
-    grid_to_screen: grid_to_screen
+    grid_to_screen: grid_to_screen,
+    reflect: reflect
 };
 
 function axial_to_cube(axial) {
@@ -32,16 +33,18 @@ function cube_round(cube) {
         rz = -rx - ry;
     }
 
-    return new Point3D(x, y, z);
+    return new Point3D(rx, ry, rz);
 }
 
 function screen_to_cube(screen, hexagonSize, hexagonWidth) {
-    screen.x = screen.x - hexagonWidth;
-    screen.y = screen.y - hexagonSize;
+    var temp = new Point();
+
+    temp.x = screen.x - hexagonWidth;
+    temp.y = screen.y - hexagonSize;
 
     var axial = new Point(
-        (screen.x * Math.sqrt(3) / 3 - screen.y / 3) / hexagonSize,
-        screen.y * 2 / 3 / hexagonSize
+        (temp.x * Math.sqrt(3) / 3 - temp.y / 3) / hexagonSize,
+        temp.y * 2 / 3 / hexagonSize
     );
 
     return cube_round(axial_to_cube(axial));
@@ -65,7 +68,7 @@ function grid_to_screen(grid, hexagonSize, hexagonWidth) {
 function reflect(dir, normal) {
     if (dir.x == 0 && dir.y == 0 || normal.x == 0 && normal.y == 0) return;
 
-    var dot = dir.x * normal.x + dir.y * normal.y;
+    var dot = dir.dot(normal);
 
-    return dir.subtract(normal.scale(dot * 2));
+    return dir.minus(normal.multiply(dot * 2));
 }

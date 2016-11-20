@@ -19,10 +19,20 @@ exports = Class(View, function (supr) {
         { 
             bubbleSlotRows: 13, 
             bubbleSlotsPerRow: 9,
+            x: 0,
+            y: 0,
             width: opts.width,
             height: opts.height,
-            superview: this
+            superview: this,
         });
+
+        _board.on("Board:end", bind(this, function() {
+            this.emit("GameScene:end");
+        }));
+
+        this.on("Application:kickoff", bind(this, function() {
+            _board.reset();
+        }));
 
         /** Private Functions **/
         

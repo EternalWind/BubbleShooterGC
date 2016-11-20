@@ -13,14 +13,13 @@ exports = Class(View, function (supr) {
 
         supr(this, 'init', [opts]);
 
-        var _text = new TextView({
+        var _bg = new ImageView({
             superview: this,
             x: 0,
             y: 0,
             width: opts.width,
             height: opts.height,
-            text: "Title Scene",
-            color: "white"
+            image: "resources/images/title_bg.png"
         });
 
         var _startbutton = new View({

@@ -3,12 +3,14 @@ import ui.ImageView as ImageView;
 import ui.TextView as TextView;
 import math.geom.Point as Point;
 import math.geom.Line as Line;
+import math.geom.Vec2D as Vec2D;
 import util.ajax as ajax;
 
 import src.gameplay.Canon as Canon;
 import src.gameplay.BubblePool as BubblePool;
 import src.gameplay.Collision as Collision;
 import src.gameplay.BubbleSlot as BubbleSlot;
+import src.gameplay.BubbleType as BubbleType;
 import src.helpers.MathExtends as MathExtends;
 
 exports = Class(View, function (supr) {
@@ -21,17 +23,8 @@ exports = Class(View, function (supr) {
         new Point(1, 0), new Point(1, 1), new Point(0, 1)
     ];
 
-    var LEFT = new Point(-1, 0);
-    var RIGHT = new Point(1, 0);
-
-    var BUBBLE_TYPES = [
-    { color: "black" },
-    { color: "white" },
-    { color: "red" },
-    { color: "blue" },
-    { color: "green" },
-    { color: "yellow" },
-    ];
+    var LEFT = new Vec2D({ x: -1, y: 0 });
+    var RIGHT = new Vec2D({ x: 1, y: 0 });
 
     var INITIAL_BUBBLE_DATA = [
     0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -40,13 +33,13 @@ exports = Class(View, function (supr) {
     -1, 3, 3, 3, 3, 3, 3, -1, -1,
     -1, -1, 4, 4, 4, 4, 4, -1, -1,
     -1, -1, 5, 5, 5, 5, -1, -1, -1,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0
+    -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1,
     ];
 
     this.init = function (opts) {
@@ -87,13 +80,11 @@ exports = Class(View, function (supr) {
         // if the player is lucky/skillful enough!
         var _collideThresholdRatio = 0.95;
 
-        var _currentActiveBubble = null;
-
         var _bubblePool = new BubblePool({
             initialBubbleCount: bubbleSlotCount,
             parent: this,
             bubbleRadius: _bubbleRadius,
-            defaultBubbleType: BUBBLE_TYPES[0]
+            defaultBubbleType: BubbleType.ORANGE
         });
 
         var _canon = new Canon({
@@ -101,12 +92,43 @@ exports = Class(View, function (supr) {
             x: this.style.width / 2,
             y: this.style.height - 50,
             hexagonSize: _hexagonSize,
-            hexagonWidth: _bubbleRadius
+            hexagonWidth: _bubbleRadius,
+            slots: _bubbleSlots,
+            pool: _bubblePool
         });
+
+        var _message = new TextView({
+            superview: this,
+            x: 0,
+            y: 0,
+            width: this.style.width,
+            height: this.style.height,
+            color: "white"
+        });
+
+        var _hasWon = false;
+        var _hasLost = false;
+
+        var _remainingBubbleCount = 0;
 
         /** Public Functions **/
 
+        this.reset = function() {
+            for (var i = 0; i < _bubbleSlots.length; ++i) {
+                _bubbleSlots[i].reset();
+            }
 
+            _currentBubbleGeneration = 0;
+            _bubblePool.despawnAll();
+            _message.hide();
+            _hasWon = false;
+            _hasLost = false;
+            _remainingBubbleCount = 0;
+
+            _load_bubbles();
+            _arrange_bubbles_in_slots();
+            _canon.reload(_generate_bubble());
+        };
 
         /** End of Public Functions **/
 
@@ -120,16 +142,26 @@ exports = Class(View, function (supr) {
             return grid.x + grid.y * _bubbleSlotsPerRow;
         }
 
+        function _calibratePosition(pos, row) {
+            if (pos.x < _right / 2 && (row & 1) == 1) {
+                pos.x -= _bubbleRadius;
+            } else if (pos.x > _right / 2 && (row & 1) == 0) {
+                pos.x += _bubbleRadius;
+            }
+
+            return pos;
+        }
+
         function _flood_fill(col, row, shouldProcess, process) {
-            if (col < 0 || col > _bubbleSlotsPerRow || row < 0 || row >= _bubbleSlotRows
+            if (col < 0 || col >= _bubbleSlotsPerRow || row < 0 || row >= _bubbleSlotRows
             || typeof shouldProcess != "function" || typeof process != "function") return;
 
-            var slotIndex = grid_to_index(col, row);
+            var slotIndex = _grid_to_index(new Point(col, row));
 
             if (!shouldProcess(_bubbleSlots[slotIndex])) return;
             process(_bubbleSlots[slotIndex]);
 
-            var neighbourGridOffsets = (row & 1) == 1 ? 
+            var neighbourGridOffsets = ((row & 1) == 1) ? 
                 NEIGHBOUR_GRID_OFFSETS_FOR_ODD_ROW : NEIGHBOUR_GRID_OFFSETS_FOR_EVEN_ROW;
             for (var i = 0; i < neighbourGridOffsets.length; ++i) {
                 _flood_fill(col + neighbourGridOffsets[i].x, row + neighbourGridOffsets[i].y, shouldProcess, process);
@@ -139,7 +171,10 @@ exports = Class(View, function (supr) {
         function _load_bubbles() {
             for (var i = 0; i < INITIAL_BUBBLE_DATA.length && i < _bubbleSlots.length; ++i) {
                 if (INITIAL_BUBBLE_DATA[i] >= 0) {
+                    _remainingBubbleCount++;
                     _bubbleSlots[i].bubble = _generate_bubble(INITIAL_BUBBLE_DATA[i]);
+                } else {
+                    _bubbleSlots[i].bubble = null;
                 }
             }
         };
@@ -150,7 +185,7 @@ exports = Class(View, function (supr) {
                     var grid = new Point(col, row);
 
                     var slot_index = _grid_to_index(grid);
-                    var screen = HexgonMath.grid_to_screen(grid, _hexagonSize, _bubbleRadius);
+                    var screen = MathExtends.grid_to_screen(grid, _hexagonSize, _bubbleRadius);
 
                     if (_bubbleSlots[slot_index].bubble != null) {
                         _bubbleSlots[slot_index].bubble.set_position(screen);
@@ -159,17 +194,17 @@ exports = Class(View, function (supr) {
             }
         };
 
-        function _generate_bubble(type_index) {
-            if (type_index == null || type_index == undefined) {
-                type_index = Math.floor(Math.random() * BUBBLE_TYPES.length);
+        function _generate_bubble(type) {
+            if (type == null || type == undefined) {
+                type = Math.floor(Math.random() * BubbleType.MAX);
             }
 
-            if (type_index < 0 || type_index >= BUBBLE_TYPES.length) {
+            if (type < 0 || type >= BubbleType.MAX) {
                 console.log("Invalid bubble type index is given!");
             }
 
             var bubble = _bubblePool.spawn();
-            bubble.reset(BUBBLE_TYPES[type_index]);
+            bubble.reset(type);
 
             return bubble;
         }
@@ -178,15 +213,22 @@ exports = Class(View, function (supr) {
             var grid = MathExtends.screen_to_grid(pos, _hexagonSize, _bubbleRadius);
             var collision = null;
 
-            var neighbourGridOffsets = (grid & 1) == 0 ?
+            var neighbourGridOffsets = ((grid.y & 1) == 0) ?
                 NEIGHBOUR_GRID_OFFSETS_FOR_EVEN_ROW : NEIGHBOUR_GRID_OFFSETS_FOR_ODD_ROW;
+
+            console.log("=====(" + grid.x + ", " + grid.y + "): " + 
+                (neighbourGridOffsets == NEIGHBOUR_GRID_OFFSETS_FOR_EVEN_ROW ?
+                "EVEN" : "ODD") + "=====");
 
             var potentialCollidersAndDistances = [];
             for (var i = 0; i < neighbourGridOffsets.length; ++i) {
                 var offset = neighbourGridOffsets[i];
-                var neighbourGrid = grid + offset;
+                var neighbourGrid = new Point(grid.x + offset.x, grid.y + offset.y);
                 var neighbourScreen = MathExtends.grid_to_screen(neighbourGrid, _hexagonSize, _bubbleRadius);
                 var distance = new Line(pos, neighbourScreen).getLength();
+
+                neighbourGrid.x = Math.round(neighbourGrid.x);
+                neighbourGrid.y = Math.round(neighbourGrid.y);
 
                 if (distance < _bubbleRadius * 2 * _collideThresholdRatio) {
                     potentialCollidersAndDistances.push({
@@ -203,12 +245,12 @@ exports = Class(View, function (supr) {
             for (var i = 0; i < potentialCollidersAndDistances.length; ++i)
             {
                 var potentialColliderGrid = potentialCollidersAndDistances[i].colliderGrid;
-                var isCollidingWithCeiling = potentialColliderGrid < 0;
+                var isCollidingWithCeiling = potentialColliderGrid.y < 0;
                 var isCollidingWithLeftWall = potentialColliderGrid.x < 0 && dir.x < 0;
                 var isCollidingWithRightWall = potentialColliderGrid.x >= _bubbleSlotsPerRow && dir.x > 0;
                 var isCollidingWithSideWalls = isCollidingWithLeftWall || isCollidingWithRightWall;
 
-                var slotIndex = _grid_to_index(potentialColliderGrid);
+                var slotIndex = Math.round(_grid_to_index(potentialColliderGrid));
 
                 if (isCollidingWithSideWalls) {
                     // Colliding with a side wall.
@@ -258,65 +300,96 @@ exports = Class(View, function (supr) {
             }
 
             return _bubbleSlots.filter(function(slot) {
-                slot.bubble && slot.bubbleGeneration < nextBubbleGeneration;
+                return slot.bubble && slot.bubbleGeneration < nextBubbleGeneration;
             });
+        }
+
+        function _play_game(input) {
+            if (_canon.canShoot()) {
+                var dir = new Vec2D({ x: input.x - _canon.style.x, y: input.y - _canon.style.y }).getUnitVector();
+
+                _canon.fire(dir, _collision_test, _calibratePosition).then(bind(this, function() {
+                    var shotBubble = _canon.get_last_bubble();
+                    var grid = MathExtends.screen_to_grid(new Point(shotBubble.style.x, shotBubble.style.y), 
+                    _hexagonSize, _bubbleRadius);
+
+                    _remainingBubbleCount++;
+
+                    if (grid.y < _bubbleSlotRows) {
+                        var chainedBubbles = [];
+                        var droppingBubbles = [];
+
+                        var slotIndex = _grid_to_index(grid);
+
+                        _bubbleSlots[slotIndex].bubble = shotBubble;
+                        _bubbleSlots[slotIndex].bubbleGeneration = _currentBubbleGeneration;
+
+                        var chainedBubbleSlots = _collect_chained_bubble_slots(grid.x, grid.y, shotBubble.get_type());
+                        if (chainedBubbleSlots.length >= _bubbleChainThreshold) {
+                            for (var i = 0; i < chainedBubbleSlots.length; ++i) {
+                                chainedBubbles.push(chainedBubbleSlots[i].bubble);
+                                chainedBubbleSlots[i].bubble = null;
+                                _remainingBubbleCount--;
+                            }
+
+                            var droppingBubbleSlots = _collect_dropping_bubble_slots(++_currentBubbleGeneration);
+                            for (var i = 0; i < droppingBubbleSlots.length; ++i) {
+                                droppingBubbles.push(droppingBubbleSlots[i].bubble);
+                                droppingBubbleSlots[i].bubble = null;
+                                _remainingBubbleCount--;
+                            }
+                        }
+
+                        if (_remainingBubbleCount <= 0) {
+                            _win();
+                        }
+
+                        for (var i = 0; i < chainedBubbles.length; ++i) {
+                            var chainedBubble = chainedBubbles[i];
+
+                            chainedBubble.explode().then(function() {
+                                _bubblePool.despawn(chainedBubble);
+                            });
+                        }
+
+                        for (var i = 0; i < droppingBubbles.length; ++i) {
+                            var droppingBubble = droppingBubbles[i];
+
+                            droppingBubble.drop(this.style.height + 50, 900).then(function() {
+                                _bubblePool.despawn(droppingBubble);
+                            });
+                        }
+
+                        _canon.reload(_generate_bubble());
+                    } else {
+                        _lose();
+                    }
+                }));
+            }
+        }
+
+        function _win() {
+            _message.setText("You have won!\nTap to return to the title.");
+            _message.show();
+
+            _hasWon = true;
+        }
+
+        function _lose() {
+            _message.setText("You have lost!\nTap to return to the title.");
+            _message.show();
+
+            _hasLost = true;
         }
 
         /** End of Private Functions **/
 
         this.on("InputSelect", bind(this, function(event, point) {
-            var dir = new Point(x - _canon.style.x, y - _canon.style.y);
-
-            _canon.fire(dir, _collision_test).then(function() {
-                var chainedBubbles = [];
-                var droppingBubbles = [];
-
-                var bubble = _canon.get_last_bubble();
-                var grid = MathExtends.screen_to_grid(new Point(bubble.style.x, bubble.style.y), 
-                _hexagonSize, _bubbleRadius);
-
-                if (grid.y < _bubbleSlotRows) {
-                    var slotIndex = _grid_to_index(grid);
-
-                    _bubbleSlots[slotIndex].bubble = bubble;
-                    _bubbleSlots[slotIndex].bubbleGeneration = _currentBubbleGeneration;
-
-                    var chainedBubbleSlots = _collect_chained_bubble_slots(grid.x, grid.y, bubble.get_type());
-                    if (chainedBubbleSlots.length >= _bubbleChainThreshold) {
-                        for (var i = 0; i < chainedBubbleSlots.length; ++i) {
-                            chainedBubbles.push(chainedBubbleSlots[i].bubble);
-                            chainedBubbleSlots[i].bubble = null;
-                        }
-
-                        var droppingBubbleSlots = _collect_dropping_bubble_slots(++_currentBubbleGeneration);
-                        for (var i = 0; i < droppingBubbleSlots.length; ++i) {
-                            droppingBubbles.push(droppingBubbleSlots[i].bubble);
-                            droppingBubbleSlots[i].bubble = null;
-                        }
-                    }
-                }
-
-                for (var i = 0; i < chainedBubbles.length; ++i) {
-                    var bubble = chainedBubbles[i];
-
-                    bubble.explode().then(function() {
-                        _bubblePool.despawn(bubble);
-                    });
-                }
-
-                for (var i = 0; i < droppingBubbles.length; ++i) {
-                    var bubble = droppingBubbles[i];
-
-                    bubble.drop(this.style.height + 50, 200).then(function() {
-                        _bubblePool.despawn(bubble);
-                    });
-                }
-
-                _canon.reload(_generate_bubble());
-            });
+            if (_hasWon || _hasLost) {
+                this.emit("Board:end");
+            } else {
+                bind(this, _play_game)(point);
+            }
         }));
-
-        _load_bubbles();
-        _arrange_bubbles_in_slots();
     };
 });

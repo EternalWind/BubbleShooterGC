@@ -12,11 +12,11 @@ exports = Class(GC.Application, function () {
     this.initUI = function () {
 
         var appSettings = {
-            width: 320,
-            height: 400
+            width: 576,
+            height: device.screen.height * 576 / device.screen.width
         };
 
-        var scale = device.width / 320;
+        var scale = device.screen.width / 576;
 
         var _title = new TitleScene(appSettings);
         var _game = new GameScene(appSettings);
@@ -30,7 +30,7 @@ exports = Class(GC.Application, function () {
             width: appSettings.width,
             height: appSettings.height,
             clip: true,
-            scale: device.width / 320
+            scale: scale
         });
 
         _rootView.push(_title);
@@ -38,6 +38,10 @@ exports = Class(GC.Application, function () {
         _title.on("TitleScene:start", function() {
             _rootView.push(_game);
             _game.emit("Application:kickoff");
+        });
+
+        _game.on("GameScene:end", function() {
+            _rootView.pop();
         });
     };
 

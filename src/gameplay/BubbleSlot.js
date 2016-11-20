@@ -12,6 +12,10 @@ exports = Class(function (supr) {
 
         /** Public Functions **/
 
+        this.reset = function() {
+            this.bubble = null;
+            this.bubbleGeneration = 0;
+        }
 
         /** End of Public Functions **/
     };
