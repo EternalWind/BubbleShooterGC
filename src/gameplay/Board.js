@@ -26,6 +26,23 @@ exports = Class(View, function (supr) {
         new Point(1, 0), new Point(1, 1), new Point(0, 1)
     ];
 
+    var DOUBLE_NEIGHBOUR_GRID_OFFSETS_FOR_EVEN_ROW = [
+            new Point(-1, 0), new Point(-1, -1), new Point(0, -1),
+            new Point(1, 0), new Point(0, 1), new Point(-1, 1),
+            new Point(-1, -2), new Point(0, -2), new Point(1, -2),
+            new Point(1, -1), new Point(2, 0), new Point(1, 1),
+            new Point(1, 2), new Point(0, 2), new Point(-1, 2),
+            new Point(-2, 1), new Point(-2, 0), new Point(-2, -1)
+    ];
+    var DOUBLE_NEIGHBOUR_GRID_OFFSETS_FOR_ODD_ROW = [
+        new Point(-1, 0), new Point(0, -1), new Point(1, -1),
+        new Point(1, 0), new Point(1, 1), new Point(0, 1),
+        new Point(-1, -2), new Point(0, -2), new Point(1, -2),
+        new Point(2, -1), new Point(2, 0), new Point(2, 1),
+        new Point(1, 2), new Point(0, 2), new Point(-1, 2),
+        new Point(-1, 1), new Point(-2, 0), new Point(-1, -2)
+    ];
+
     var LEFT = new Vec2D({ x: -1, y: 0 });
     var RIGHT = new Vec2D({ x: 1, y: 0 });
 
@@ -377,9 +394,16 @@ exports = Class(View, function (supr) {
             return _neighbourGridOffsets;
         }
 
+        function _getDoubleNeighboursFor(grid) {
+            var _neighbourGridOffsets = ((grid.y & 1) == 0) ?
+                DOUBLE_NEIGHBOUR_GRID_OFFSETS_FOR_EVEN_ROW : DOUBLE_NEIGHBOUR_GRID_OFFSETS_FOR_ODD_ROW;
+
+            return _neighbourGridOffsets;
+        }
+
         function _pushBubbles(center) {
             var _grid = MathExtends.screenToGrid(center, _hexagonSize);
-            var _neighbourGridOffsets = _getNeighboursFor(_grid);
+            var _neighbourGridOffsets = _getDoubleNeighboursFor(_grid);
 
             for (var _i = 0; _i < _neighbourGridOffsets.length; ++_i) {
                 var _neighbourGrid = new Point(_grid.x + _neighbourGridOffsets[_i].x,
