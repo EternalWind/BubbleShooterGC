@@ -9,8 +9,7 @@ exports = Class(ImageView, function (supr) {
         opts = merge(opts, {
             x: 0,
             y: 0,
-            offsetX: -opts.radius,
-            offsetY: -opts.radius,
+            centerAnchor: true,
             width: opts.radius * 2,
             height: opts.radius * 2,
             zIndex: 1
@@ -21,6 +20,8 @@ exports = Class(ImageView, function (supr) {
         var _animator = animate(this);
         var _type = null;
         var _imgProvider = opts.imgProvider;
+        var _bubblePool = opts.bubblePool;
+        var _explosionPool = opts.explosionPool;
 
         /** Private Functions **/
         
@@ -57,16 +58,28 @@ exports = Class(ImageView, function (supr) {
                 return _animator.then({ x: target.x, y: target.y }, time, animate.linear);
         };
 
-        this.explode = function() {
+        this.explode = function(vfx) {
             return _animator.now({ scale: 1.5 }, 250, animate.easeOutCubic)
-            .then({ scale: 0 }, 350, animate.easeInCubic);
+            .then({ scale: 0 }, 350, animate.easeInCubic).then(bind(this, function() {
+                _bubblePool.despawn(this);
+
+                var _explosion = _explosionPool.spawn();
+                _explosion.reset(this.getType());
+                _explosion.setPosition(this.getPosition());
+
+                _explosion.play(function() {
+                    _explosionPool.despawn(_explosion);
+                });
+            }));
         };
 
         this.drop = function(to, speed) {
             if (speed == 0) return _animator;
 
             var _time = Math.abs(this.style.y - to) / speed * 1000;
-            return _animator.now({ y: to }, _time, animate.easeIn);
+            return _animator.now({ y: to }, _time, animate.easeIn).then(bind(this, function() {
+                _bubblePool.despawn(this);
+            }));
         };
 
         /** End of Public Functions **/

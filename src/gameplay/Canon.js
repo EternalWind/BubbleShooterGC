@@ -16,11 +16,13 @@ exports = Class(View, function (supr) {
         opts = merge(opts, {
             x: 0,
             y: 0,
-            offsetX: -_size / 2,
-            offsetY: -_size / 2,
             width: _size,
-            height: _size
+            height: _size,
+            centerAnchor: true
         });
+
+        opts.x -= _size / 2;
+        opts.y -= _size / 2;
 
         supr(this, 'init', [opts]);
 
@@ -59,6 +61,10 @@ exports = Class(View, function (supr) {
         /** End of Private Functions **/
 
         /** Public Functions **/
+
+        this.getPosition = function() {
+            return new Point(this.style.x + _size / 2, this.style.y + _size / 2);
+        };
 
         this.reset = function() {
             _currentBubble = null;
@@ -133,12 +139,14 @@ exports = Class(View, function (supr) {
             _currentBubble = _nextBubble;
 
             if (_currentBubble != null)
-                _currentBubble.setPosition(new Point(this.style.x, this.style.y));
+                _currentBubble.setPosition(new Point(this.style.x - Math.abs(this.style.width - _currentBubble.style.width) / 2,
+                this.style.y - Math.abs(this.style.height - _currentBubble.style.height) / 2));
 
             _nextBubble = bubble;
 
             if (_nextBubble != null)
-                _nextBubble.setPosition(new Point(this.style.x + _nextBubbleOffset.x, this.style.y + _nextBubbleOffset.y));
+                _nextBubble.setPosition(new Point(this.style.x - Math.abs(this.style.width - _nextBubble.style.width) / 2 + _nextBubbleOffset.x,
+                this.style.y - Math.abs(this.style.height - _nextBubble.style.height) / 2 + _nextBubbleOffset.y));
 
             _canShoot = _currentBubble != null;
         }

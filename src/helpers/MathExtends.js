@@ -39,8 +39,8 @@ function cubeRound(cube) {
 function screenToCube(screen, hexagonSize, hexagonWidth) {
     var _temp = new Point();
 
-    _temp.x = screen.x - hexagonWidth;
-    _temp.y = screen.y - hexagonSize;
+    _temp.x = screen.x;
+    _temp.y = screen.y;
 
     var axial = new Point(
         (_temp.x * Math.sqrt(3) / 3 - _temp.y / 3) / hexagonSize,
@@ -62,7 +62,7 @@ function gridToScreen(grid, hexagonSize, hexagonWidth) {
     var _x = hexagonSize * Math.sqrt(3) * (grid.x + 0.5 * (grid.y & 1));
     var _y = hexagonSize * 3 / 2 * grid.y;
 
-    return new Point(_x + hexagonWidth, _y + hexagonSize);
+    return new Point(_x, _y);
 }
 
 function reflect(dir, normal) {

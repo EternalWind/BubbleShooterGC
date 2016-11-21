@@ -1,5 +1,3 @@
-import ui.resource.Image as Image;
-
 import src.gameplay.BubbleType as BubbleType;
 import src.helpers.PathHelpers as PathHelpers;
 
@@ -7,7 +5,7 @@ exports = Class(function (supr) {
     this.init = function () {
         var _imgs = [];
         for (var _i = 0; _i < BubbleType.MAX; ++_i) {
-            _imgs.push(new Image({ url: PathHelpers.getParticleImgPath(_i) }));
+            _imgs.push(PathHelpers.getParticleImgPath(_i));
         }
 
         /** Private Functions **/

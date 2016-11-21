@@ -13,6 +13,7 @@ import src.gameplay.BubbleSlot as BubbleSlot;
 import src.gameplay.BubbleType as BubbleType;
 import src.helpers.MathExtends as MathExtends;
 import src.helpers.PathHelpers as PathHelpers;
+import src.vfx.ExplosionPool as ExplosionPool;
 
 exports = Class(View, function (supr) {
     var NEIGHBOUR_GRID_OFFSETS_FOR_EVEN_ROW = [
@@ -88,10 +89,17 @@ exports = Class(View, function (supr) {
         // if the player is lucky/skillful enough!
         var _collideThresholdRatio = 0.95;
 
+        var _explosionPool = new ExplosionPool({
+            parent: _elementsRoot
+        });
+
+        _explosionPool.preload(10);
+
         var _bubblePool = new BubblePool({
             parent: _elementsRoot,
             bubbleRadius: _bubbleRadius,
-            defaultBubbleType: BubbleType.ORANGE
+            defaultBubbleType: BubbleType.ORANGE,
+            explosionPool: _explosionPool
         });
 
         _bubblePool.preload(_bubbleSlotCount);
@@ -141,6 +149,7 @@ exports = Class(View, function (supr) {
 
             _currentBubbleGeneration = 0;
             _bubblePool.despawnAll();
+            _explosionPool.despawnAll();
             _message.hide();
             _hasWon = false;
             _hasLost = false;
@@ -339,7 +348,8 @@ exports = Class(View, function (supr) {
 
         function _playGame(input) {
             if (_canon.canShoot()) {
-                var _dir = new Vec2D({ x: input.x - _canon.style.x, y: input.y - _canon.style.y }).getUnitVector();
+                var _canonPos = _canon.getPosition();
+                var _dir = new Vec2D({ x: input.x - _canonPos.x, y: input.y - _canonPos.y }).getUnitVector();
 
                 _canon.fire(_dir, _collisionTest, _calibratePosition).then(bind(this, function() {
                     var _shotBubble = _canon.getLastBubble();
@@ -381,18 +391,12 @@ exports = Class(View, function (supr) {
 
                         for (var _i = 0; _i < _chainedBubbles.length; ++_i) {
                             var _chainedBubble = _chainedBubbles[_i];
-
-                            _chainedBubble.explode().then(function() {
-                                _bubblePool.despawn(_chainedBubble);
-                            });
+                            _chainedBubble.explode();
                         }
 
                         for (var _i = 0; _i < _droppingBubbles.length; ++_i) {
                             var _droppingBubble = _droppingBubbles[_i];
-
-                            _droppingBubble.drop(this.style.height + 50, 900).then(function() {
-                                _bubblePool.despawn(_droppingBubble);
-                            });
+                            _droppingBubble.drop(this.style.height + 50, 900);
                         }
 
                         _canon.reload(_generateBubble());

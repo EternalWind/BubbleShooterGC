@@ -1,6 +1,3 @@
-import ui.View as View;
-import ui.ImageView as ImageView;
-import ui.TextView as TextView;
 import src.gameplay.Bubble as Bubble;
 import src.helpers.BubbleImageProvider as BubbleImageProvider;
 import src.helpers.Pool as Pool;
@@ -19,7 +16,9 @@ exports = Class(Pool, function (supr) {
                 superview: parent,
                 radius: opts.bubbleRadius,
                 type: _defaultBubbleType,
-                imgProvider: _imgProvider
+                imgProvider: _imgProvider,
+                bubblePool: this,
+                explosionPool: opts.explosionPool
             });
         };
 
