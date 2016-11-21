@@ -93,7 +93,7 @@ exports = Class(View, function (supr) {
             parent: _elementsRoot
         });
 
-        _explosionPool.preload(10);
+        _explosionPool.preload(30);
 
         var _bubblePool = new BubblePool({
             parent: _elementsRoot,
@@ -110,7 +110,8 @@ exports = Class(View, function (supr) {
             y: _bottom,
             width: opts.width,
             height: 88,
-            image: PathHelpers.getImgPath("bar")
+            image: PathHelpers.getImgPath("bar"),
+            zIndex: 0
         })
 
         var _canon = new Canon({
@@ -123,14 +124,26 @@ exports = Class(View, function (supr) {
             pool: _bubblePool
         });
 
-        var _message = new TextView({
+        var _winMark = new ImageView({
             superview: _elementsRoot,
             x: 0,
-            y: 0,
+            y: this.style.height / 2,
+            offsetY: -this.style.width / 4,
+            image: PathHelpers.getImgPath("win"),
             width: this.style.width,
-            height: this.style.height,
-            zIndex: 10,
-            color: "white"
+            height: this.style.width / 2,
+            zIndex: 10
+        });
+
+        var _loseMark = new ImageView({
+            superview: _elementsRoot,
+            x: 0,
+            y: this.style.height / 2,
+            offsetY: -this.style.width / 4,
+            image: PathHelpers.getImgPath("lose"),
+            width: this.style.width,
+            height: this.style.width / 2,
+            zIndex: 10
         });
 
         var _hasWon = false;
@@ -149,8 +162,12 @@ exports = Class(View, function (supr) {
 
             _currentBubbleGeneration = 0;
             _bubblePool.despawnAll();
+
+            _explosionPool.reset();
             _explosionPool.despawnAll();
-            _message.hide();
+            
+            _winMark.hide();
+            _loseMark.hide();
             _hasWon = false;
             _hasLost = false;
             _remainingBubbleCount = 0;
@@ -408,15 +425,13 @@ exports = Class(View, function (supr) {
         }
 
         function _win() {
-            _message.setText("You have won! Tap to return to the title.");
-            _message.show();
+            _winMark.show();
 
             _hasWon = true;
         }
 
         function _lose() {
-            _message.setText("You have lost! Tap to return to the title.");
-            _message.show();
+            _loseMark.show();
 
             _hasLost = true;
         }

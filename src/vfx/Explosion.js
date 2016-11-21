@@ -6,18 +6,16 @@ import math.geom.Vec2D as Vec2D;
 import animate;
 
 exports = Class(View, function(supr) {
-    var TTL = 4000;
+    var TTL = 8000;
     var DELTA_ROTATION = Math.PI / 18;
     var SIZE = 25;
-    var SPEED = 50;
+    var SPEED = 12;
 
     this.init = function(opts) {
+        opts.zIndex = 5;
         supr(this, 'init', [opts]);
 
-        var _particleEngine = new ParticleEngine({
-            parent: this,
-            centerAnchor: true
-        });
+        var _particleEngine = opts.particleEngine;
 
         var _isEnabled = false;
         var _particleImgProvider = opts.particleImgProvider;
@@ -38,8 +36,8 @@ exports = Class(View, function(supr) {
                 var _velocity = _dir.multiply(SPEED);
 
                 _pObj.image = _particleImgProvider.getImageFor(_type);
-                _pObj.x = 0;
-                _pObj.y = 0;
+                _pObj.x = this.style.x;
+                _pObj.y = this.style.y;
                 _pObj.dr = DELTA_ROTATION * 1000 / TTL;
                 _pObj.dx = _velocity.x;
                 _pObj.dy = _velocity.y;
@@ -58,7 +56,6 @@ exports = Class(View, function(supr) {
 
         this.stop = function() {
             _isEnabled = false;
-            _particleEngine.killAllParticles();
             this.hide();
         };
 

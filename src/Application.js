@@ -10,6 +10,7 @@ import src.scenes.GameScene as GameScene;
 exports = Class(GC.Application, function () {
 
     this.initUI = function () {
+        this.engine.setMaxListeners(50);
 
         var _appSettings = {
             width: 576,

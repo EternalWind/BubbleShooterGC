@@ -7,10 +7,11 @@ import math.geom.Line as Line;
 
 import src.gameplay.Collision as Collision;
 import src.helpers.MathExtends as MathExtends;
+import src.helpers.PathHelpers as PathHelpers;
 
-exports = Class(View, function (supr) {
+exports = Class(ImageView, function (supr) {
     this.init = function (opts) {
-        var _size = 50;
+        var _size = 128;
         var _fireSpeed = 700;
 
         opts = merge(opts, {
@@ -18,6 +19,7 @@ exports = Class(View, function (supr) {
             y: 0,
             width: _size,
             height: _size,
+            image: PathHelpers.getImgPath("canon_base"),
             centerAnchor: true
         });
 
@@ -31,7 +33,30 @@ exports = Class(View, function (supr) {
         var _canShoot = false;
         var _hexagonSize = opts.hexagonSize;
         var _hexagonWidth = opts.hexagonWidth;
-        var _nextBubbleOffset = new Point(0, _hexagonWidth * 2);
+
+        var _nextBubbleHolder = new ImageView({
+            superview: this,
+            centerAnchor: true,
+            width: _size,
+            height: _size,
+            image: PathHelpers.getImgPath("canon_base"),
+            x: _size * 0.8,
+            y: _size * 0.5
+        });
+
+        var _barrel = new ImageView({
+            superview: opts.superview,
+            width: _size,
+            height: _size,
+            x: opts.x,
+            y: opts.y,
+            zIndex: 2,
+            image: PathHelpers.getImgPath("canon_barrel"),
+            offsetX: 0,
+            offsetY: -_size / 2,
+            anchorX: _size / 2,
+            anchorY: _size
+        });
 
         /** Private Functions **/
         
@@ -58,6 +83,11 @@ exports = Class(View, function (supr) {
             }
         };
 
+        function _getNextBubbleHolderAbsPosition() {
+            return new Point(this.style.x + _nextBubbleHolder.style.x,
+                this.style.y + _nextBubbleHolder.style.y);
+        }
+
         /** End of Private Functions **/
 
         /** Public Functions **/
@@ -78,6 +108,11 @@ exports = Class(View, function (supr) {
 
         this.fire = function(dir, collisionTest, calibratePos) {
             if (typeof collisionTest != "function" || typeof calibratePos != "function") return;
+
+            var _firingAngle = dir.getAngle() + Math.PI / 2;
+            _barrel.updateOpts({
+                r: _firingAngle
+            });
 
             _canShoot = false;
 
@@ -139,14 +174,17 @@ exports = Class(View, function (supr) {
             _currentBubble = _nextBubble;
 
             if (_currentBubble != null)
-                _currentBubble.setPosition(new Point(this.style.x - Math.abs(this.style.width - _currentBubble.style.width) / 2,
-                this.style.y - Math.abs(this.style.height - _currentBubble.style.height) / 2));
+                _currentBubble.setPosition(new Point(this.style.x + Math.abs(this.style.width - _currentBubble.style.width) / 2,
+                this.style.y + Math.abs(this.style.height - _currentBubble.style.height) / 2));
 
             _nextBubble = bubble;
 
-            if (_nextBubble != null)
-                _nextBubble.setPosition(new Point(this.style.x - Math.abs(this.style.width - _nextBubble.style.width) / 2 + _nextBubbleOffset.x,
-                this.style.y - Math.abs(this.style.height - _nextBubble.style.height) / 2 + _nextBubbleOffset.y));
+            if (_nextBubble != null) {
+                var _holderPos = bind(this, _getNextBubbleHolderAbsPosition)();
+
+                _nextBubble.setPosition(new Point(_holderPos.x + Math.abs(_nextBubbleHolder.style.width - _nextBubble.style.width) / 2,
+                _holderPos.y + Math.abs(_nextBubbleHolder.style.height - _nextBubble.style.height) / 2));
+            }
 
             _canShoot = _currentBubble != null;
         }
