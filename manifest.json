@@ -1,17 +1,21 @@
 {
-  "appID": "6bf654d525af401c913046455dbfd88d",
-  "dependencies": {
-    "devkit-core": "https://github.com/gameclosure/devkit-core#"
-  },
-  "shortName": "helloworld",
-  "studio": {
-    "domain": "studio.example.com",
-    "name": "Your Studio Name",
-    "stagingDomain": "staging.example.com"
-  },
-  "supportedOrientations": [
-    "portrait",
-    "landscape"
-  ],
-  "title": "helloworld"
+    "appID": "6bf654d525af401c913046455dbfd88d",
+    "dependencies": {
+        "devkit-core": "https://github.com/gameclosure/devkit-core#"
+    },
+    "shortName": "BubbleShooter",
+    "studio": {
+        "domain": "studio.example.com",
+        "name": "Your Studio Name",
+        "stagingDomain": "staging.example.com"
+    },
+    "supportedOrientations": [
+        "portrait",
+        "landscape"
+    ],
+    "title": "BubbleShooter",
+    "splash": {
+        "autoHide": true,
+        "universal": "resources/splash/portrait.png"
+    }
 }
