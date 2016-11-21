@@ -3,72 +3,72 @@ import math.geom.Point as Point;
 import src.helpers.Point3D as Point3D;
 
 exports = {
-    axial_to_cube: axial_to_cube,
-    cube_round: cube_round,
-    screen_to_cube: screen_to_cube,
-    cube_to_grid: cube_to_grid,
-    screen_to_grid: screen_to_grid,
-    grid_to_screen: grid_to_screen,
+    axialToCube: axialToCube,
+    cubeRound: cubeRound,
+    screenToCube: screenToCube,
+    cubeToGrid: cubeToGrid,
+    screenToGrid: screenToGrid,
+    gridToScreen: gridToScreen,
     reflect: reflect
 };
 
-function axial_to_cube(axial) {
+function axialToCube(axial) {
     return new Point3D(axial.x, -axial.x - axial.y, axial.y);
 }
 
-function cube_round(cube) {
-    var rx = Math.round(cube.x);
-    var ry = Math.round(cube.y);
-    var rz = Math.round(cube.z);
+function cubeRound(cube) {
+    var _rx = Math.round(cube.x);
+    var _ry = Math.round(cube.y);
+    var _rz = Math.round(cube.z);
 
-    var xDiff = Math.abs(rx - cube.x);
-    var yDiff = Math.abs(ry - cube.y);
-    var zDiff = Math.abs(rz - cube.z);
+    var _xDiff = Math.abs(_rx - cube.x);
+    var _yDiff = Math.abs(_ry - cube.y);
+    var _zDiff = Math.abs(_rz - cube.z);
 
-    if (xDiff > yDiff && xDiff > zDiff) {
-        rx = -ry - rz;
-    } else if (yDiff > zDiff) {
-        ry = -rx - rz;
+    if (_xDiff > _yDiff && _xDiff > _zDiff) {
+        _rx = -_ry - _rz;
+    } else if (_yDiff > _zDiff) {
+        _ry = -_rx - _rz;
     } else {
-        rz = -rx - ry;
+        _rz = -_rx - _ry;
     }
 
-    return new Point3D(rx, ry, rz);
+    return new Point3D(_rx, _ry, _rz);
 }
 
-function screen_to_cube(screen, hexagonSize, hexagonWidth) {
-    var temp = new Point();
+function screenToCube(screen, hexagonSize, hexagonWidth) {
+    var _temp = new Point();
 
-    temp.x = screen.x - hexagonWidth;
-    temp.y = screen.y - hexagonSize;
+    _temp.x = screen.x - hexagonWidth;
+    _temp.y = screen.y - hexagonSize;
 
     var axial = new Point(
-        (temp.x * Math.sqrt(3) / 3 - temp.y / 3) / hexagonSize,
-        temp.y * 2 / 3 / hexagonSize
+        (_temp.x * Math.sqrt(3) / 3 - _temp.y / 3) / hexagonSize,
+        _temp.y * 2 / 3 / hexagonSize
     );
 
-    return cube_round(axial_to_cube(axial));
+    return cubeRound(axialToCube(axial));
 }
 
-function cube_to_grid(cube) {
+function cubeToGrid(cube) {
     return new Point(cube.x + (cube.z - (cube.z & 1)) / 2, cube.z);
 }
 
-function screen_to_grid(screen, hexagonSize, hexagonWidth) {
-    return cube_to_grid(screen_to_cube(screen, hexagonSize, hexagonWidth));
+function screenToGrid(screen, hexagonSize, hexagonWidth) {
+    return cubeToGrid(screenToCube(screen, hexagonSize, hexagonWidth));
 }
 
-function grid_to_screen(grid, hexagonSize, hexagonWidth) {
-    var x = hexagonSize * Math.sqrt(3) * (grid.x + 0.5 * (grid.y & 1));
-    var y = hexagonSize * 3 / 2 * grid.y;
+function gridToScreen(grid, hexagonSize, hexagonWidth) {
+    var _x = hexagonSize * Math.sqrt(3) * (grid.x + 0.5 * (grid.y & 1));
+    var _y = hexagonSize * 3 / 2 * grid.y;
 
-    return new Point(x + hexagonWidth, y + hexagonSize);
+    return new Point(_x + hexagonWidth, _y + hexagonSize);
 }
 
 function reflect(dir, normal) {
     if (dir.x == 0 && dir.y == 0 || normal.x == 0 && normal.y == 0) return;
 
-    var dot = dir.dot(normal);
+    var _dot = dir.dot(normal);
 
-    return dir.minus(normal.multiply(dot * 2));
+    return dir.minus(normal.multiply(_dot * 2));
 }

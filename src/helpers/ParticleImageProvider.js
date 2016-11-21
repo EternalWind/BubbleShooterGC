@@ -1,15 +1,13 @@
 import ui.resource.Image as Image;
 
 import src.gameplay.BubbleType as BubbleType;
+import src.helpers.PathHelpers as PathHelpers;
 
 exports = Class(function (supr) {
     this.init = function () {
-        var _imgFolder = "resources/images/";
-        var _imgExtension = ".png";
-
         var _imgs = [];
-        for (var i = 0; i < BubbleType.MAX; ++i) {
-            _imgs.push(new Image({ url: _imgFolder + i + _imgExtension }));
+        for (var _i = 0; _i < BubbleType.MAX; ++_i) {
+            _imgs.push(new Image({ url: PathHelpers.getParticleImgPath(_i) }));
         }
 
         /** Private Functions **/

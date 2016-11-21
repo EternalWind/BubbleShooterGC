@@ -12,12 +12,12 @@ exports = Class(ImageView, function (supr) {
             offsetX: -opts.radius,
             offsetY: -opts.radius,
             width: opts.radius * 2,
-            height: opts.radius * 2
+            height: opts.radius * 2,
+            zIndex: 1
         });
 
         supr(this, 'init', [opts]);
 
-        this.id = opts.id;
         var _animator = animate(this);
         var _type = null;
         var _imgProvider = opts.imgProvider;
@@ -37,20 +37,20 @@ exports = Class(ImageView, function (supr) {
             _animator.clear();
         };
 
-        this.get_type = function() {
+        this.getType = function() {
             return _type;
         }
 
-        this.set_position = function(pos) {
+        this.setPosition = function(pos) {
             this.style.x = pos.x;
             this.style.y = pos.y;
         };
 
-        this.get_position = function() {
+        this.getPosition = function() {
             return new Point(this.style.x, this.style.y);
         }
 
-        this.move_to = function(target, time, shouldInterrupt) {
+        this.moveTo = function(target, time, shouldInterrupt) {
             if (shouldInterrupt)
                 return _animator.now({ x: target.x, y: target.y }, time, animate.linear);
             else
@@ -65,8 +65,8 @@ exports = Class(ImageView, function (supr) {
         this.drop = function(to, speed) {
             if (speed == 0) return _animator;
 
-            var time = Math.abs(this.style.y - to) / speed * 1000;
-            return _animator.now({ y: to }, time, animate.easeIn);
+            var _time = Math.abs(this.style.y - to) / speed * 1000;
+            return _animator.now({ y: to }, _time, animate.easeIn);
         };
 
         /** End of Public Functions **/

@@ -11,26 +11,29 @@ exports = Class(GC.Application, function () {
 
     this.initUI = function () {
 
-        var appSettings = {
+        var _appSettings = {
             width: 576,
-            height: device.screen.height * 576 / device.screen.width
+            height: 1024
         };
 
-        var scale = device.screen.width / 576;
+        var _appAspect = _appSettings.width / _appSettings.height;
+        var _deviceNativeAspect = device.screen.width / device.screen.height;
 
-        var _title = new TitleScene(appSettings);
-        var _game = new GameScene(appSettings);
+        var _scale = _appAspect >= _deviceNativeAspect ? device.screen.width / _appSettings.width : device.screen.height / _appSettings.height;
+
+        var _title = new TitleScene(_appSettings);
+        var _game = new GameScene(_appSettings);
 
         this.view.style.backgroundColor = "#000000";
 
         var _rootView = new StackView({
             superview: this,
-            x: 0,
-            y: (device.height - appSettings.height * scale) / 2,
-            width: appSettings.width,
-            height: appSettings.height,
+            x: (device.width - _appSettings.width * _scale) / 2,
+            y: (device.height - _appSettings.height * _scale) / 2,
+            width: _appSettings.width,
+            height: _appSettings.height,
             clip: true,
-            scale: scale
+            scale: _scale
         });
 
         _rootView.push(_title);

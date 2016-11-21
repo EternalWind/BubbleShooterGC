@@ -15,6 +15,15 @@ exports = Class(View, function (supr) {
 
         supr(this, 'init', [opts]);
 
+        var _bg = new ImageView({
+            superview: this,
+            x: 0,
+            y: 0,
+            width: opts.width,
+            height: opts.height,
+            image: "resources/images/game_bg.png"
+        });
+
         var _board = new Board(
         { 
             bubbleSlotRows: 13, 
