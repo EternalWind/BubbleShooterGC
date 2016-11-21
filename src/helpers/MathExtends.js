@@ -36,7 +36,7 @@ function cubeRound(cube) {
     return new Point3D(_rx, _ry, _rz);
 }
 
-function screenToCube(screen, hexagonSize, hexagonWidth) {
+function screenToCube(screen, hexagonSize) {
     var _temp = new Point();
 
     _temp.x = screen.x;
@@ -54,11 +54,11 @@ function cubeToGrid(cube) {
     return new Point(cube.x + (cube.z - (cube.z & 1)) / 2, cube.z);
 }
 
-function screenToGrid(screen, hexagonSize, hexagonWidth) {
-    return cubeToGrid(screenToCube(screen, hexagonSize, hexagonWidth));
+function screenToGrid(screen, hexagonSize) {
+    return cubeToGrid(screenToCube(screen, hexagonSize));
 }
 
-function gridToScreen(grid, hexagonSize, hexagonWidth) {
+function gridToScreen(grid, hexagonSize) {
     var _x = hexagonSize * Math.sqrt(3) * (grid.x + 0.5 * (grid.y & 1));
     var _y = hexagonSize * 3 / 2 * grid.y;
 

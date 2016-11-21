@@ -51,11 +51,15 @@ exports = Class(ImageView, function (supr) {
             return new Point(this.style.x, this.style.y);
         }
 
-        this.moveTo = function(target, time, shouldInterrupt) {
+        this.moveTo = function(target, time, shouldInterrupt, movementType) {
+            if (!movementType) {
+                movementType = animate.linear;
+            }
+
             if (shouldInterrupt)
-                return _animator.now({ x: target.x, y: target.y }, time, animate.linear);
+                return _animator.now({ x: target.x, y: target.y }, time, movementType);
             else
-                return _animator.then({ x: target.x, y: target.y }, time, animate.linear);
+                return _animator.then({ x: target.x, y: target.y }, time, movementType);
         };
 
         this.explode = function(vfx) {

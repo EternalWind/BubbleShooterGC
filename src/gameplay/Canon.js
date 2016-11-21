@@ -121,7 +121,7 @@ exports = Class(ImageView, function (supr) {
             
             var _collision = _bubbleMarching(_currentWaypoint, dir, _hexagonWidth / 2, collisionTest);
             var _screenPos = MathExtends.gridToScreen(_collision.grid,
-                _hexagonSize, _hexagonWidth);
+                _hexagonSize);
 
             if (!_collision.isSticking) {
                 _screenPos = calibratePos(_screenPos, _collision.grid.y);
@@ -139,7 +139,7 @@ exports = Class(ImageView, function (supr) {
                 _collision = _bubbleMarching(_nextWaypoint, dir, _hexagonWidth / 2, collisionTest);
                 _currentWaypoint = _nextWaypoint;
 
-                _screenPos = MathExtends.gridToScreen(_collision.grid, _hexagonSize, _hexagonWidth);
+                _screenPos = MathExtends.gridToScreen(_collision.grid, _hexagonSize);
                 if (!_collision.isSticking) {
                     _screenPos = calibratePos(_screenPos, _collision.grid.y);
                 }
