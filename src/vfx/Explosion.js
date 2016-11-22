@@ -1,6 +1,5 @@
 import ui.View as View;
 import ui.ImageView as ImageView;
-import ui.Engine as Engine;
 import math.geom.Vec2D as Vec2D;
 import animate;
 
@@ -9,7 +8,7 @@ import animate;
 **/
 exports = Class(View, function(supr) {
     // Time to live for a particle.
-    var TTL = 8000;
+    var TTL = 1000;
 
     // The rotation angle to change at every tick for a particle.
     var DELTA_ROTATION = Math.PI / 18;
@@ -18,7 +17,7 @@ exports = Class(View, function(supr) {
     var SIZE = 25;
 
     // The moving speed of a particle.
-    var SPEED = 12;
+    var SPEED = 200;
 
     this.init = function(opts) {
         opts.zIndex = 5;
@@ -26,7 +25,6 @@ exports = Class(View, function(supr) {
 
         var _particleEngine = opts.particleEngine;
 
-        var _isEnabled = false;
         var _particleImgProvider = opts.particleImgProvider;
         var _animator = animate(this);
 
@@ -70,7 +68,6 @@ exports = Class(View, function(supr) {
             Stops the explosion effect.
         **/
         this.stop = function() {
-            _isEnabled = false;
             this.hide();
         };
 
@@ -80,7 +77,6 @@ exports = Class(View, function(supr) {
         **/
         this.play = function(onFinish) {
             bind(this, _emitParticles)();
-            _isEnabled = true;
             this.show();
 
             _animator.wait(TTL).then(function() {
@@ -111,11 +107,5 @@ exports = Class(View, function(supr) {
         };
 
         /** End of Public Functions **/
-
-        Engine.get().on('Tick', bind(this, function(dt) {
-            if (_isEnabled) {
-                _particleEngine.runTick(dt);
-            }
-        }));
     };
 });

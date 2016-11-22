@@ -1,3 +1,5 @@
+import ui.Engine as Engine;
+
 import src.vfx.ParticleEngine as ParticleEngine;
 import src.vfx.Explosion as Explosion;
 import src.helpers.ParticleImageProvider as ParticleImageProvider;
@@ -53,5 +55,9 @@ exports = Class(Pool, function (supr) {
         };
 
         /** End of Public Functions **/ 
+
+        Engine.get().on('Tick', bind(this, function(dt) {
+            _particleEngine.runTick(dt);
+        }));
     };
 });
