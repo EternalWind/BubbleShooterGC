@@ -201,7 +201,38 @@ exports = Class(View, function (supr) {
 
         var _loseMarkAnimator = new animate(_loseMark);
 
+        // The ready mark which will be shown at the begining of the game.
+        var _readyMark = new ImageView({
+            superview: _elementsRoot,
+            x: 0,
+            y: this.style.height / 2,
+            offsetY: -this.style.width / 4,
+            image: PathHelpers.getImgPath("ready"),
+            width: this.style.width,
+            height: this.style.width / 2,
+            zIndex: 10,
+            scale: 0,
+            centerAnchor: true
+        });
+
+        var _readyMarkAnimator = new animate(_readyMark);
+
+        // The go mark which will be shown right after the ready mark disappears.
+        var _goMark = new ImageView({
+            superview: _elementsRoot,
+            x: 0,
+            y: this.style.height / 2,
+            offsetY: -this.style.width / 4,
+            image: PathHelpers.getImgPath("go"),
+            width: this.style.width,
+            height: this.style.width / 2,
+            zIndex: 10
+        });
+
         var _fireworksAnimator = new animate(this);
+
+        // A flag indicating whether the player is ready or not.
+        var _isReady = false;
 
         // A flag indicating whether the player has won or not.
         var _hasWon = false;
@@ -238,6 +269,7 @@ exports = Class(View, function (supr) {
             _loseMark.hide();
             _hasWon = false;
             _hasLost = false;
+            _isReady = false;
             _remainingBubbleCount = 0;
 
             _loadBubbles();
@@ -246,6 +278,22 @@ exports = Class(View, function (supr) {
             // Loads two bubbles. One is for the current firing bubble and the other one is for the next firing bubble.
             _canon.reload(_generateBubble());
             _canon.reload(_generateBubble());
+
+            _readyMarkAnimator.clear();
+
+            _goMark.hide();
+            _readyMark.show();
+            _readyMark.updateOpts({ scale: 0 });
+
+            _readyMarkAnimator.wait(1000).then({ scale: 1.3 }, 700, animate.easeIn)
+                .then({ scale: 1 }, 70, animate.linear).wait(700)
+            .then(function() {
+                _readyMark.hide();
+                _goMark.show();
+            }).wait(1000).then(function() {
+                _goMark.hide();
+                _isReady = true;
+            });
         };
 
         /** End of Public Functions **/
@@ -732,7 +780,7 @@ exports = Class(View, function (supr) {
         this.on("InputSelect", bind(this, function(event, point) {
             if (_hasWon || _hasLost) {
                 this.emit("Board:end");
-            } else {
+            } else if (_isReady) {
                 bind(this, _fireCanon)(point);
             }
         }));
