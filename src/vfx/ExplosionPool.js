@@ -3,6 +3,9 @@ import src.vfx.Explosion as Explosion;
 import src.helpers.ParticleImageProvider as ParticleImageProvider;
 import src.helpers.Pool as Pool;
 
+/**
+    A pool for managing explosion effects' life cycles and recycling them.
+**/
 exports = Class(Pool, function (supr) {
     this.init = function (opts) {
         supr(this, 'init', [opts]);
@@ -16,6 +19,9 @@ exports = Class(Pool, function (supr) {
 
         /** Public Functions */
 
+        /**
+            @see Pool.createObj
+        **/
         this.createObj = function(parent) {
             return new Explosion({
                 superview: parent,
@@ -24,15 +30,24 @@ exports = Class(Pool, function (supr) {
             });
         };
 
+        /**
+            @see Pool.showObj
+        **/
         this.showObj = function(obj) {
             obj.show();
         };
 
+        /**
+            @see Pool.hideObj
+        **/
         this.hideObj = function(obj) {
             obj.stop();
             obj.hide();
         };
 
+        /**
+            Resets all the explosion effects managed by this pool.
+        **/
         this.reset = function() {
             _particleEngine.killAllParticles();
         };

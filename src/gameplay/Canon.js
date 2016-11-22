@@ -9,6 +9,9 @@ import src.gameplay.Collision as Collision;
 import src.helpers.MathExtends as MathExtends;
 import src.helpers.PathHelpers as PathHelpers;
 
+/**
+    A class to represent the canon which is used to shoot the bubble, calculate its path and make it moves.
+**/
 exports = Class(ImageView, function (supr) {
     this.init = function (opts) {
         var _size = 128;
@@ -28,12 +31,22 @@ exports = Class(ImageView, function (supr) {
 
         supr(this, 'init', [opts]);
 
+        // The current bubble to be shot.
         var _currentBubble = null;
+
+        // The next bubble to be shot.
         var _nextBubble = null;
+
+        // Whether the canon can fire now or not.
         var _canShoot = false;
+
+        // The size of a hexagon cell.
         var _hexagonSize = opts.hexagonSize;
+
+        // The width of a hexagon cell.
         var _hexagonWidth = opts.hexagonWidth;
 
+        // The holder object for the next bubble to be shot.
         var _nextBubbleHolder = new ImageView({
             superview: this,
             centerAnchor: true,
@@ -44,6 +57,7 @@ exports = Class(ImageView, function (supr) {
             y: _size * 0.5
         });
 
+        // The barrel object of the canon.
         var _barrel = new ImageView({
             superview: opts.superview,
             width: _size,
@@ -60,6 +74,14 @@ exports = Class(ImageView, function (supr) {
 
         /** Private Functions **/
         
+        /**
+            A bubble version of ray marching to pre-calculate the bubble's shooting path.
+            @param start The starting position in screen coordinate.
+            @param dir The direction to march.
+            @param step The step size of the marching.
+            @param collisionTest A function to test whether a collision has happened or not.
+            @returns The collision result.
+        **/
         function _bubbleMarching(start, dir, step, collisionTest) {
             if (typeof collisionTest != "function") return;
             if (dir.x == 0 && dir.y == 0) return;
@@ -83,6 +105,10 @@ exports = Class(ImageView, function (supr) {
             }
         };
 
+        /**
+            Gets the absolute position in screen coordinate of the holder for the next bubble.
+            @returns The absolute position of the holder.
+        **/
         function _getNextBubbleHolderAbsPosition() {
             return new Point(this.style.x + _nextBubbleHolder.style.x,
                 this.style.y + _nextBubbleHolder.style.y);
@@ -92,20 +118,38 @@ exports = Class(ImageView, function (supr) {
 
         /** Public Functions **/
 
+        /**
+            Gets the position of the canon in screen coordinate.
+            @returns The position of the canon.
+        **/
         this.getPosition = function() {
             return new Point(this.style.x + _size / 2, this.style.y + _size / 2);
         };
 
+        /**
+            Resets the canon to its initial state.
+        **/
         this.reset = function() {
             _currentBubble = null;
             _nextBubble = null;
             _canShoot = false;
         }
 
+        /**
+            Whether the canon can fire right now or not.
+            @returns Whether the canon can fire or not.
+        **/
         this.canShoot = function() {
             return _canShoot;
         }
 
+        /**
+            Fires the canon.
+            @param dir The firing direction.
+            @param collisionTest A function to check for collision.
+            @param calibratePos A function to calibrate the position for edge locations.
+            @returns The handle to the fired bubble's movement.
+        **/
         this.fire = function(dir, collisionTest, calibratePos) {
             if (typeof collisionTest != "function" || typeof calibratePos != "function") return;
 
@@ -168,6 +212,10 @@ exports = Class(ImageView, function (supr) {
             return _bubbleMovement;
         }
 
+        /**
+            Reloads the canon with a bubble. This will make the next bubble the current and the new bubble the next.
+            @bubble The bubble to load.
+        **/
         this.reload = function(bubble) {
             _currentBubble = _nextBubble;
 
@@ -187,7 +235,11 @@ exports = Class(ImageView, function (supr) {
             _canShoot = _currentBubble != null;
         }
 
-        this.getLastBubble = function() {
+        /**
+            Gets the current active bubble.
+            @returns The current bubble.
+        **/
+        this.getCurrentBubble = function() {
             return _currentBubble;
         }
 

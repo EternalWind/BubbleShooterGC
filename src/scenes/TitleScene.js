@@ -2,6 +2,9 @@ import ui.View as View;
 import ui.ImageView as ImageView;
 import ui.TextView as TextView;
 
+/**
+    The title scene.
+**/
 exports = Class(View, function (supr) {
     this.init = function (opts) {
         opts = merge(opts, {

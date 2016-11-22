@@ -16,19 +16,29 @@ import src.helpers.MathExtends as MathExtends;
 import src.helpers.PathHelpers as PathHelpers;
 import src.vfx.ExplosionPool as ExplosionPool;
 
+/**
+    A class to represent the game board providing gameplay calculations involving the information related to the whole game world.
+**/
 exports = Class(View, function (supr) {
+    // Neighbour odd-r coordinate offsets for rows with even indices. E.q. row 0, row 2...
     var NEIGHBOUR_GRID_OFFSETS_FOR_EVEN_ROW = [
             new Point(-1, 0), new Point(-1, -1), new Point(0, -1),
             new Point(1, 0), new Point(0, 1), new Point(-1, 1)
     ];
+
+    // Neighbour odd-r coordinate offsets for rows with ood indices. E.q. row 1, row 3...
     var NEIGHBOUR_GRID_OFFSETS_FOR_ODD_ROW = [
         new Point(-1, 0), new Point(0, -1), new Point(1, -1),
         new Point(1, 0), new Point(1, 1), new Point(0, 1)
     ];
 
+    // The left-pointing unit vector.
     var LEFT = new Vec2D({ x: -1, y: 0 });
+
+    // The right-pointing unit vector.
     var RIGHT = new Vec2D({ x: 1, y: 0 });
 
+    // The initial bubble data for the board.
     var INITIAL_BUBBLE_DATA = [
     0, 0, 0, 0, 0, 0, 0, 0, 0,
     1, 1, 1, 1, 1, 1, 1, 1, -1,
@@ -45,7 +55,10 @@ exports = Class(View, function (supr) {
     -1, -1, -1, -1, -1, -1, -1, -1, -1,
     ];
 
+    // The interval for which a bubble push animates.
     var BUBBLE_PUSHING_TIME = 50;
+
+    // The distance that a bubble will be pushed along.
     var BUBBLE_PUSHING_DIST = 10;
 
     this.init = function (opts) {
@@ -63,42 +76,65 @@ exports = Class(View, function (supr) {
         });
         opts.superview = this;
 
+        // The root view for all the gameplay elements on the board.
         var _elementsRoot = new View(opts);
 
+        // The amount of rows of bubble slots this board contains.
         var _bubbleSlotRows = opts.bubbleSlotRows;
+
+        // The amount of bubble slots in each row.
         var _bubbleSlotsPerRow = opts.bubbleSlotsPerRow;
         
+        // The total number of bubble slots on this board.
         var _bubbleSlotCount = _bubbleSlotsPerRow * _bubbleSlotRows;
-        var _bubbleSlots = [];
-        for (var _i = 0; _i < _bubbleSlotCount; ++_i) {
-            _bubbleSlots.push(new BubbleSlot());
-        }
 
+        // The bubble slot array.
+        var _bubbleSlots = [];
+        
+
+        // The radius of a bubble which is also the width of a hexagon cell.
         // The width should be just enough for [_bubbleSlotsPerRow] + 0.5 bubbles
         // because the existance of horizontal offsets introduced by hexagons.
         var _bubbleRadius = opts.width / (_bubbleSlotsPerRow * 2 + 1);
+
+        // The threshold for a normal bubble chain to be considered happening.
         var _bubbleChainThreshold = 3;
+
+        // The current bubble generation used for finding out which bubbles to drop.
         var _currentBubbleGeneration = 0;
 
-        // Hexagon grid math reference: http://www.redblobgames.com/grids/hexagons/
+        // The size of a hexagon cell.
         var _hexagonSize = _bubbleRadius / Math.cos(30 * Math.PI / 180);
+
+        // The height of a hexagon cell.
         var _hexagonHeight = _hexagonSize * 2;
+
+        // The vertical distance between two adjcant hexagon cells.
         var _hexagonVerticalDistance = _hexagonHeight * 3 / 4;
+
+        // The left boarder of the board.
         var _left = 0;
+
+        // The right boarder of the board.
         var _right = _left + opts.width;
+
+        // The ceiling of the board.
         var _top = 0;
+
+        // The bottom line of the board.
         var _bottom = _top + (_bubbleSlotRows - 1) * _hexagonVerticalDistance + _hexagonSize * 2;
 
-        // To make the bubble can be shot through 1-bubble-sized gaps
+        // The threshold ratio for finding out neighbour slots/cells the bubble being shot is colliding with.
+        // This is to make the bubble can be shot through one-bubble-sized gaps
         // if the player is lucky/skillful enough!
         var _collideThresholdRatio = 0.95;
 
+        // A pool for explosion effects.
         var _explosionPool = new ExplosionPool({
             parent: _elementsRoot
         });
 
-        _explosionPool.preload(30);
-
+        // A pool for bubbles.
         var _bubblePool = new BubblePool({
             parent: _elementsRoot,
             bubbleRadius: _bubbleRadius,
@@ -106,8 +142,7 @@ exports = Class(View, function (supr) {
             explosionPool: _explosionPool
         });
 
-        _bubblePool.preload(_bubbleSlotCount);
-
+        // The bottom bar object.
         var _bottomBar = new ImageView({
             superview: _elementsRoot,
             x: 0,
@@ -118,6 +153,7 @@ exports = Class(View, function (supr) {
             zIndex: 0
         })
 
+        // The canon object.
         var _canon = new Canon({
             superview: _elementsRoot,
             x: this.style.width / 2,
@@ -128,6 +164,7 @@ exports = Class(View, function (supr) {
             pool: _bubblePool
         });
 
+        // The win mark which will be shown upon winning the game.
         var _winMark = new ImageView({
             superview: _elementsRoot,
             x: 0,
@@ -139,6 +176,7 @@ exports = Class(View, function (supr) {
             zIndex: 10
         });
 
+        // The lose mark which will be shown upon losing the game.
         var _loseMark = new ImageView({
             superview: _elementsRoot,
             x: 0,
@@ -150,13 +188,20 @@ exports = Class(View, function (supr) {
             zIndex: 10
         });
 
+        // A flag indicating whether the player has won or not.
         var _hasWon = false;
+
+        // A flag indicating whether the player has lost or not.
         var _hasLost = false;
 
+        // The remaining amount of bubbles on the board.
         var _remainingBubbleCount = 0;
 
         /** Public Functions **/
 
+        /**
+            Resets the board to its initial state.
+        **/
         this.reset = function() {
             _canon.reset();
 
@@ -188,36 +233,58 @@ exports = Class(View, function (supr) {
 
         /** Private Functions **/
 
+        /**
+            Converts an odd-r offset coordinate to a bubble slot index.
+            @param grid The odd-r offset coordinate.
+            @returns The converted bubble slot index.
+        **/
         function _gridToIndex(grid) {
             return grid.x + grid.y * _bubbleSlotsPerRow;
         }
 
-        function _calibratePosition(pos, _row) {
-            if (pos.x < _right / 2 && (_row & 1) == 1) {
+        /**
+            Calibrates a given position so that position on each edge of the board's two sides can visually be touching the actual edge of the screen.
+            This method should only be used for edge positions.
+            @param pos The position in screen coordiante.
+            @param row The row index for the given position.
+            @returns The calibrated position in screen coordinate.
+        **/
+        function _calibratePosition(pos, row) {
+            if (pos.x < _right / 2 && (row & 1) == 1) {
                 pos.x -= _bubbleRadius;
-            } else if (pos.x > _right / 2 && (_row & 1) == 0) {
+            } else if (pos.x > _right / 2 && (row & 1) == 0) {
                 pos.x += _bubbleRadius;
             }
 
             return pos;
         }
 
-        function _floodFill(_col, _row, shouldProcess, process) {
-            if (_col < 0 || _col >= _bubbleSlotsPerRow || _row < 0 || _row >= _bubbleSlotRows
+        /**
+            An implementation of the flood fill algorithm used to find out connected bubbles of the same type and bubbles that are not connected to the ceiling.
+            @param col The column index to start search from.
+            @param row The row index to start search from.
+            @param shouldProcess A function to decide whether a given bubble slot should be process or not.
+            @param process A function to do the actual processing to a matched bubble slot.
+        **/
+        function _floodFill(col, row, shouldProcess, process) {
+            if (col < 0 || col >= _bubbleSlotsPerRow || row < 0 || row >= _bubbleSlotRows
             || typeof shouldProcess != "function" || typeof process != "function") return;
 
-            var _slotIndex = _gridToIndex(new Point(_col, _row));
+            var _slotIndex = _gridToIndex(new Point(col, row));
 
             if (!shouldProcess(_bubbleSlots[_slotIndex])) return;
             process(_bubbleSlots[_slotIndex]);
 
-            var _neighbourGridOffsets = ((_row & 1) == 1) ? 
+            var _neighbourGridOffsets = ((row & 1) == 1) ? 
                 NEIGHBOUR_GRID_OFFSETS_FOR_ODD_ROW : NEIGHBOUR_GRID_OFFSETS_FOR_EVEN_ROW;
             for (var _i = 0; _i < _neighbourGridOffsets.length; ++_i) {
-                _floodFill(_col + _neighbourGridOffsets[_i].x, _row + _neighbourGridOffsets[_i].y, shouldProcess, process);
+                _floodFill(col + _neighbourGridOffsets[_i].x, row + _neighbourGridOffsets[_i].y, shouldProcess, process);
             }
         };
 
+        /**
+            Loads the initial bubble data.
+        **/
         function _loadBubbles() {
             for (var _i = 0; _i < INITIAL_BUBBLE_DATA.length && _i < _bubbleSlots.length; ++_i) {
                 if (INITIAL_BUBBLE_DATA[_i] >= 0) {
@@ -229,6 +296,9 @@ exports = Class(View, function (supr) {
             }
         };
 
+        /**
+            Positions the loaded bubbles.
+        **/
         function _arrangeBubblesInSlots() {
             for (var _row = 0; _row < _bubbleSlotRows; ++_row) {
                 for (var _col = 0; _col < _bubbleSlotsPerRow; ++_col) {
@@ -244,6 +314,11 @@ exports = Class(View, function (supr) {
             }
         };
 
+        /**
+            Generates a bubble of a given type.
+            @param type The bubble type.
+            @returns The generated bubble.
+        **/
         function _generateBubble(type) {
             if (type == null || type == undefined) {
                 type = Math.floor(Math.random() * BubbleType.MAX);
@@ -259,6 +334,12 @@ exports = Class(View, function (supr) {
             return _bubble;
         }
 
+        /**
+            Tests if a bubble at a given position with a given moving direction is colliding with other bubbles or a wall.
+            @param pos The position of the bubbld being tested.
+            @param dir The moving direction of the bubble being tested.
+            @returns The collision test result.
+        **/
         function _collisionTest(pos, dir) {
             var _grid = MathExtends.screenToGrid(pos, _hexagonSize);
             var _collision = null;
@@ -312,7 +393,73 @@ exports = Class(View, function (supr) {
             return _collision;
         }
 
+        /**
+            Collects a list of bubble slots whose bubbles are considered involved in a bubble chain.
+            @param startingCol The starting column index to search for a bubble chain.
+            @param startingRow The starting row index to search for a bubble chain.
+            @param chainingBubbleType The bubble type of the chain.
+            @returns A list of chained bubble slots.
+        **/
         function _collectChainedBubbleSlots(startingCol, startingRow, chainingBubbleType) {
+            var _chainedBubbleSlots = [];
+
+            switch (chainingBubbleType) {
+                case BubbleType.BOMB:
+                    _chainedBubbleSlots = _collectChainedBubbleSlotsBomb(startingCol, startingRow);
+                    break;
+
+                case BubbleType.STONE:
+                    _chainedBubbleSlots = _collectChainedBubbleSlotsStone();
+                    break;
+
+                default:
+                    _chainedBubbleSlots = _collectChainedBubbleSlotsNormal(startingCol, startingRow, chainingBubbleType);
+                    break;
+            }
+
+            return _chainedBubbleSlots;
+        }
+
+        /**
+            Collects a bubble chain for the stone bubbles.
+            @returns A list of chained bubble slots.
+        **/
+        function _collectChainedBubbleSlotsStone() {
+            // Stone bubbles trigger nothing.
+            return [];
+        }
+
+        /**
+            Collects a bubble chain for the bomb bubbles.
+            @param startingCol The starting column index to search for a bubble chain.
+            @param startingRow The starting row index to search for a bubble chain.
+            @returns A list of chained bubble slots.
+        **/
+        function _collectChainedBubbleSlotsBomb(startingCol, startingRow) {
+            var _startingGrid = new Point(startingCol, startingRow);
+            var _scaningGrids = _getNeighboursFor(_startingGrid);
+            _scaningGrids.push(_startingGrid);
+
+            var _chainedBubbleSlots = [];
+
+            for (var _i = 0; _i < _scaningGrids.length; ++_i) {
+                if (_isNonEmpty(_scaningGrids[_i])) {
+                    var _slotIndex = _gridToIndex(_scaningGrids[_i]);
+                    _chainedBubbleSlots.push(_bubbleSlots[_slotIndex]);
+                }
+            }
+
+            return _chainedBubbleSlots;
+        }
+
+        /**
+            Collects a bubble chain for the normal bubbles.
+            @param startingCol The starting column index to search for a bubble chain.
+            @param startingRow The starting row index to search for a bubble chain.
+            @param chainingBubbleType The bubble type of the chain.
+            @returns A list of chained bubble slots.
+        **/
+        function _collectChainedBubbleSlotsNormal(startingCol, startingRow, chainingBubbleType) {
             var _chainedBubbleSlots = [];
 
             _floodFill(startingCol, startingRow,
@@ -321,11 +468,21 @@ exports = Class(View, function (supr) {
                 },
                 function(slot) {
                     _chainedBubbleSlots.push(slot);
-            });
+                });
+
+            // For normal bubbles, only the total connect bubble count passes a given threshold can be considered chained.
+            if (_chainedBubbleSlots.length < _bubbleChainThreshold) {
+                _chainedBubbleSlots = [];
+            }
 
             return _chainedBubbleSlots;
         }
 
+        /**
+            Collects a list of bubble slots whose bubbles are no longer connected to the ceiling so that they will be dropped.
+            @param nextBubbleGeneration The next bubble generation.
+            @returns A list of bubble slots whose bubbles should be dropped.
+        **/
         function _collectDroppingBubbleSlots(nextBubbleGeneration) {
             for (var _col = 0; _col < _bubbleSlotsPerRow; ++_col) {
                 _floodFill(_col, 0,
@@ -343,10 +500,20 @@ exports = Class(View, function (supr) {
             });
         }
 
+        /**
+            Whether a given r-odd coordinate is within the board or not.
+            @param grid The r-odd coordinate.
+            @returns Whether it is within the board or not.
+        **/
         function _isValidGridLocation(grid) {
             return grid.x >= 0 && grid.x < _bubbleSlotsPerRow && grid.y >= 0 && grid.y < _bubbleSlotRows;
         }
 
+        /**
+            Gets all the neighbour r-odd coordinates of a given location in r-odd coordinate.
+            @param grid The given r-odd coordinate.
+            @returns The neighbour r-odd coordinates.
+        **/
         function _getNeighboursFor(grid) {
             var _neighbourGridOffsets = ((grid.y & 1) == 0) ?
                 NEIGHBOUR_GRID_OFFSETS_FOR_EVEN_ROW : NEIGHBOUR_GRID_OFFSETS_FOR_ODD_ROW;
@@ -359,6 +526,11 @@ exports = Class(View, function (supr) {
             return _neighbourGirds;
         }
 
+        /**
+            Whether the slot at a given r-odd coordinate is empty or not.
+            @param The given r-odd coordinate.
+            @returns Whether the slot is empty or not.
+        **/
         function _isNonEmpty(grid) {
             if (_isValidGridLocation(grid)) {
                 var _slotIndex = _gridToIndex(grid);
@@ -368,6 +540,11 @@ exports = Class(View, function (supr) {
             return false;
         }
 
+        /**
+            Gets two tiers of neighbour r-odd coordinates which are connected to the starting point and the slots in which are not empty.
+            @param grid The starting point in r-odd coordinate.
+            @returns A list of neighbours.
+        **/
         function _getConnectedDoubledNonEmptyNeighboursFor(grid) {
             var _nonEmptyNeighbourGrids = _getNeighboursFor(grid).filter(_isNonEmpty);
             var _closestNeighbourCount = _nonEmptyNeighbourGrids.length;
@@ -392,6 +569,10 @@ exports = Class(View, function (supr) {
             return _nonEmptyNeighbourGrids;
         }
 
+        /**
+            Performs bubble pushes for all the bubbles centered at a given position in screen coordinate except for the one located right at the center.
+            @param center The center position in screen coordinate.
+        **/
         function _pushBubbles(center) {
             var _grid = MathExtends.screenToGrid(center, _hexagonSize);
             var _neighbourGrids = _getConnectedDoubledNonEmptyNeighboursFor(_grid);
@@ -412,13 +593,17 @@ exports = Class(View, function (supr) {
             }
         }
 
-        function _playGame(input) {
+        /**
+            Fires the canon.
+            @param input The point in screen coordinate where the touch input happened.
+        **/
+        function _fireCanon(input) {
             if (_canon.canShoot()) {
                 var _canonPos = _canon.getPosition();
                 var _dir = new Vec2D({ x: input.x - _canonPos.x, y: input.y - _canonPos.y }).getUnitVector();
 
                 _canon.fire(_dir, _collisionTest, _calibratePosition).then(bind(this, function() {
-                    var _shotBubble = _canon.getLastBubble();
+                    var _shotBubble = _canon.getCurrentBubble();
                     var _grid = MathExtends.screenToGrid(_shotBubble.getPosition(), 
                     _hexagonSize);
 
@@ -434,7 +619,7 @@ exports = Class(View, function (supr) {
                         _bubbleSlots[_slotIndex].bubbleGeneration = _currentBubbleGeneration;
 
                         var _chainedBubbleSlots = _collectChainedBubbleSlots(_grid.x, _grid.y, _shotBubble.getType());
-                        if (_chainedBubbleSlots.length >= _bubbleChainThreshold) {
+                        if (_chainedBubbleSlots.length > 0) {
                             for (var _i = 0; _i < _chainedBubbleSlots.length; ++_i) {
                                 _chainedBubbles.push(_chainedBubbleSlots[_i].bubble);
                                 _chainedBubbleSlots[_i].bubble = null;
@@ -473,12 +658,18 @@ exports = Class(View, function (supr) {
             }
         }
 
+        /**
+            Marks the player has won the game.
+        **/
         function _win() {
             _winMark.show();
 
             _hasWon = true;
         }
 
+        /**
+            Marks the player has lost the game.
+        **/
         function _lose() {
             _loseMark.show();
 
@@ -487,11 +678,18 @@ exports = Class(View, function (supr) {
 
         /** End of Private Functions **/
 
+        for (var _i = 0; _i < _bubbleSlotCount; ++_i) {
+            _bubbleSlots.push(new BubbleSlot());
+        }
+
+        _explosionPool.preload(30);
+        _bubblePool.preload(_bubbleSlotCount);
+
         this.on("InputSelect", bind(this, function(event, point) {
             if (_hasWon || _hasLost) {
                 this.emit("Board:end");
             } else {
-                bind(this, _playGame)(point);
+                bind(this, _fireCanon)(point);
             }
         }));
     };

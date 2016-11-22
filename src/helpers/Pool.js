@@ -1,10 +1,21 @@
+/**
+    An interface for object pools.
+**/
 exports = Class(function (supr) {
     this.init = function (opts) {
+        // The parent view for all the pooled objects.
         var _parentView = opts.parent;
+
+        // The all the objects with their status in this pool.
         var _boxedObjs = [];
 
         /** Public Functions */
 
+        /**
+            Spawns a new object from this pool. 
+            If there is no available object currently, a new one will be created and added to the pool.
+            @returns The spawned object.
+        **/
         this.spawn = function() {
             var _boxedObj = _boxedObjs.find(function(b) {
                 return !b.isActive;
@@ -26,6 +37,10 @@ exports = Class(function (supr) {
             return _boxedObj.obj;
         };
 
+        /**
+            Despawns a given object managed by this pool.
+            @param obj The object to despawn.
+        **/
         this.despawn = function(obj) {
             var _boxedObj = _boxedObjs.find(function(b) {
                 return b.obj == obj;
@@ -39,6 +54,9 @@ exports = Class(function (supr) {
             }
         }
 
+        /**
+            Despawns all the objects managed by this pool.
+        **/
         this.despawnAll = function() {
             for (var _i = 0; _i < _boxedObjs.length; ++_i) {
                 _boxedObjs[_i].isActive = false;
@@ -46,6 +64,10 @@ exports = Class(function (supr) {
             }
         }
 
+        /**
+            Preloads a given amount of objects.
+            @param amount The amount of objects to reload.
+        **/
         this.preload = function (amount) {
             for (var _i = 0; _i < amount; ++_i) {
                 var _boxedObj = {

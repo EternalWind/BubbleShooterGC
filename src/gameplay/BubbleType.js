@@ -5,5 +5,7 @@ exports = {
     BLUE: 3,
     GREEN: 4,
     YELLOW: 5,
-    MAX: 6
+    BOMB: 6,
+    STONE: 7,
+    MAX: 8
 };

@@ -4,10 +4,20 @@ import ui.Engine as Engine;
 import math.geom.Vec2D as Vec2D;
 import animate;
 
+/**
+    A class to control the explosion effect.
+**/
 exports = Class(View, function(supr) {
+    // Time to live for a particle.
     var TTL = 8000;
+
+    // The rotation angle to change at every tick for a particle.
     var DELTA_ROTATION = Math.PI / 18;
+
+    // The radius of a particle.
     var SIZE = 25;
+
+    // The moving speed of a particle.
     var SPEED = 12;
 
     this.init = function(opts) {
@@ -22,6 +32,9 @@ exports = Class(View, function(supr) {
 
         /** Private Functions **/
         
+        /**
+            Emits serveral particles at current position.
+        **/
         function _emitParticles() {
             // obtain 10 particle objects from particle engine
             var _data = _particleEngine.obtainParticleArray(10);
@@ -53,11 +66,18 @@ exports = Class(View, function(supr) {
 
         /** Public Functions **/
 
+        /**
+            Stops the explosion effect.
+        **/
         this.stop = function() {
             _isEnabled = false;
             this.hide();
         };
 
+        /**
+            Plays the explosion effect.
+            @param onFinish A callback that gets called when the explosion effect is done playing.
+        **/
         this.play = function(onFinish) {
             bind(this, _emitParticles)();
             _isEnabled = true;
@@ -72,11 +92,19 @@ exports = Class(View, function(supr) {
             })
         };
 
+        /**
+            Resets the explosion effect with a given type.
+            @param type The type of explosions which is being reset to.
+        **/
         this.reset = function(type) {
             stop();
             _type = type;
         };
 
+        /**
+            Sets the position of the explosion effect.
+            @param pos The new position.
+        **/
         this.setPosition = function(pos) {
             this.style.x = pos.x;
             this.style.y = pos.y;

@@ -4,6 +4,9 @@ import ui.TextView as TextView;
 
 import src.gameplay.Board as Board;
 
+/**
+    The game scene.
+**/
 exports = Class(View, function (supr) {
     this.init = function (opts) {
         opts = merge(opts, {
