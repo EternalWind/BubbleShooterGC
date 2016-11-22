@@ -61,6 +61,15 @@ exports = Class(View, function (supr) {
     // The distance that a bubble will be pushed along.
     var BUBBLE_PUSHING_DIST = 10;
 
+    // How many times should the fireworks effect be looped.
+    var FIREWORKS_LOOP = 20;
+
+    // The maximum interval between two fireworks loops.
+    var FIREWORKS_MAX_INTERVAL = 1000;
+
+    // The maximum concurrent amount of fireworks in each loop.
+    var FIREWORKS_MAX_CONCURRENT_COUNT = 4;
+
     this.init = function (opts) {
         opts = merge(opts, {
             x: 0,
@@ -176,6 +185,8 @@ exports = Class(View, function (supr) {
             zIndex: 10
         });
 
+        var _winMarkAnimator = new animate(_winMark);
+
         // The lose mark which will be shown upon losing the game.
         var _loseMark = new ImageView({
             superview: _elementsRoot,
@@ -187,6 +198,10 @@ exports = Class(View, function (supr) {
             height: this.style.width / 2,
             zIndex: 10
         });
+
+        var _loseMarkAnimator = new animate(_loseMark);
+
+        var _fireworksAnimator = new animate(this);
 
         // A flag indicating whether the player has won or not.
         var _hasWon = false;
@@ -212,9 +227,13 @@ exports = Class(View, function (supr) {
             _currentBubbleGeneration = 0;
             _bubblePool.despawnAll();
 
+            _winMarkAnimator.clear();
+            _loseMarkAnimator.clear();
+            _fireworksAnimator.clear();
+
             _explosionPool.reset();
             _explosionPool.despawnAll();
-            
+
             _winMark.hide();
             _loseMark.hide();
             _hasWon = false;
@@ -659,10 +678,33 @@ exports = Class(View, function (supr) {
         }
 
         /**
+            Displays some awesome fireworks!
+        **/
+        function _showFireworks() {
+            for (var _i = 0; _i < FIREWORKS_LOOP; ++_i) {
+                _fireworksAnimator.then(function() {
+                    var _count = FIREWORKS_MAX_CONCURRENT_COUNT * Math.random();
+
+                    for (var _j = 0; _j < _count; ++_j) {
+                        var _pos = new Point(opts.width * Math.random(), opts.height * Math.random());
+                        var _firework = _explosionPool.spawn();
+                        _firework.setPosition(_pos);
+                        _firework.reset(Math.floor(Math.random() * BubbleType.MAX));
+                        _firework.play();
+                    }
+                }).wait(FIREWORKS_MAX_INTERVAL * Math.random());
+            }
+        }
+
+        /**
             Marks the player has won the game.
         **/
         function _win() {
             _winMark.show();
+            _winMark.updateOpts({ opacity: 0 });
+            _winMarkAnimator.now({ opacity: 1 }, 2000);
+
+            _showFireworks();
 
             _hasWon = true;
         }
@@ -672,6 +714,8 @@ exports = Class(View, function (supr) {
         **/
         function _lose() {
             _loseMark.show();
+            _loseMark.updateOpts({ opacity: 0 });
+            _loseMarkAnimator.now({ opacity: 1 }, 2000);
 
             _hasLost = true;
         }
