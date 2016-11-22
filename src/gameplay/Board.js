@@ -26,23 +26,6 @@ exports = Class(View, function (supr) {
         new Point(1, 0), new Point(1, 1), new Point(0, 1)
     ];
 
-    var DOUBLE_NEIGHBOUR_GRID_OFFSETS_FOR_EVEN_ROW = [
-            new Point(-1, 0), new Point(-1, -1), new Point(0, -1),
-            new Point(1, 0), new Point(0, 1), new Point(-1, 1),
-            new Point(-1, -2), new Point(0, -2), new Point(1, -2),
-            new Point(1, -1), new Point(2, 0), new Point(1, 1),
-            new Point(1, 2), new Point(0, 2), new Point(-1, 2),
-            new Point(-2, 1), new Point(-2, 0), new Point(-2, -1)
-    ];
-    var DOUBLE_NEIGHBOUR_GRID_OFFSETS_FOR_ODD_ROW = [
-        new Point(-1, 0), new Point(0, -1), new Point(1, -1),
-        new Point(1, 0), new Point(1, 1), new Point(0, 1),
-        new Point(-1, -2), new Point(0, -2), new Point(1, -2),
-        new Point(2, -1), new Point(2, 0), new Point(2, 1),
-        new Point(1, 2), new Point(0, 2), new Point(-1, 2),
-        new Point(-1, 1), new Point(-2, 0), new Point(-1, -2)
-    ];
-
     var LEFT = new Vec2D({ x: -1, y: 0 });
     var RIGHT = new Vec2D({ x: 1, y: 0 });
 
@@ -205,10 +188,6 @@ exports = Class(View, function (supr) {
 
         /** Private Functions **/
 
-        function _isSlotIndexValid(index) {
-            return index >= 0 && index < _bubbleSlots.length;
-        }
-
         function _gridToIndex(grid) {
             return grid.x + grid.y * _bubbleSlotsPerRow;
         }
@@ -284,29 +263,15 @@ exports = Class(View, function (supr) {
             var _grid = MathExtends.screenToGrid(pos, _hexagonSize);
             var _collision = null;
 
-            var _neighbourGridOffsets = _getNeighboursFor(_grid);
-
-            console.log("=====(" + _grid.x + ", " + _grid.y + "): " + 
-                (_neighbourGridOffsets == NEIGHBOUR_GRID_OFFSETS_FOR_EVEN_ROW ?
-                "EVEN" : "ODD") + "=====");
+            var _neighbours = _getNeighboursFor(_grid);
 
             var potentialCollidersAndDistances = [];
-            for (var _i = 0; _i < _neighbourGridOffsets.length; ++_i) {
-                var _offset = _neighbourGridOffsets[_i];
-                var _neighbourGrid = new Point(_grid.x + _offset.x, _grid.y + _offset.y);
+            for (var _i = 0; _i < _neighbours.length; ++_i) {
+                var _neighbourGrid = _neighbours[_i];
                 var _neighbourScreen = MathExtends.gridToScreen(_neighbourGrid, _hexagonSize);
                 var _distance = new Line(pos, _neighbourScreen).getLength();
 
                 if (_distance < _bubbleRadius * 2 * _collideThresholdRatio) {
-                    var _slotI = _gridToIndex(_neighbourGrid);
-                    var s = null;
-                    if (_neighbourGrid.x >= 0 && _neighbourGrid.x < _bubbleSlotsPerRow 
-                    && _neighbourGrid.y >= 0 && _neighbourGrid.y < _bubbleSlotRows) {
-                        s = _bubbleSlots[_slotI].bubble;
-                    }
-
-                    console.log("(" + _neighbourGrid.x + ", " + _neighbourGrid.y + "): " + (s != null ? s.getTag() : null));
-
                     potentialCollidersAndDistances.push({
                         colliderGrid: _neighbourGrid,
                         _distance: _distance
@@ -326,11 +291,6 @@ exports = Class(View, function (supr) {
                 var _isCollidingWithRightWall = _potentialColliderGrid.x >= _bubbleSlotsPerRow && dir.x > 0;
                 var _isCollidingWithSideWalls = _isCollidingWithLeftWall || _isCollidingWithRightWall;
 
-                var _slotIndex = -1;
-                if (_isValidGridLocation(_potentialColliderGrid)) {
-                    _slotIndex = Math.round(_gridToIndex(_potentialColliderGrid));
-                }
-
                 if (_isCollidingWithSideWalls) {
                     // Colliding with a side wall.
                     _collision = new Collision();
@@ -339,7 +299,7 @@ exports = Class(View, function (supr) {
                     _collision.collidingPointNormal = _isCollidingWithLeftWall ? LEFT : RIGHT;
 
                     break;
-                } else if (_isCollidingWithCeiling || _isSlotIndexValid(_slotIndex) && _bubbleSlots[_slotIndex].bubble) {
+                } else if (_isCollidingWithCeiling || _isNonEmpty(_potentialColliderGrid)) {
                     // Colliding with the ceiling or another bubble.
                     _collision = new Collision();
                     _collision.isSticking = true;
@@ -391,38 +351,64 @@ exports = Class(View, function (supr) {
             var _neighbourGridOffsets = ((grid.y & 1) == 0) ?
                 NEIGHBOUR_GRID_OFFSETS_FOR_EVEN_ROW : NEIGHBOUR_GRID_OFFSETS_FOR_ODD_ROW;
 
-            return _neighbourGridOffsets;
+            var _neighbourGirds = [];
+            for (var _i = 0; _i < _neighbourGridOffsets.length; ++_i) {
+                _neighbourGirds.push(new Point(grid.x + _neighbourGridOffsets[_i].x, grid.y + _neighbourGridOffsets[_i].y));
+            }
+
+            return _neighbourGirds;
         }
 
-        function _getDoubleNeighboursFor(grid) {
-            var _neighbourGridOffsets = ((grid.y & 1) == 0) ?
-                DOUBLE_NEIGHBOUR_GRID_OFFSETS_FOR_EVEN_ROW : DOUBLE_NEIGHBOUR_GRID_OFFSETS_FOR_ODD_ROW;
+        function _isNonEmpty(grid) {
+            if (_isValidGridLocation(grid)) {
+                var _slotIndex = _gridToIndex(grid);
+                return _bubbleSlots[_slotIndex].bubble;
+            }
 
-            return _neighbourGridOffsets;
+            return false;
+        }
+
+        function _getConnectedDoubledNonEmptyNeighboursFor(grid) {
+            var _nonEmptyNeighbourGrids = _getNeighboursFor(grid).filter(_isNonEmpty);
+            var _closestNeighbourCount = _nonEmptyNeighbourGrids.length;
+
+            // Scan the neighbours of the closest six neighbours.
+            for (var _i = 0; _i < _closestNeighbourCount; ++_i) {
+                var _nonEmptySecondTierNeighbourGrids = _getNeighboursFor(_nonEmptyNeighbourGrids[_i]).filter(_isNonEmpty);
+
+                // Add those non-empty second tier neighbours to the neighbour list if they have not been added already.
+                for (var _j = 0; _j < _nonEmptySecondTierNeighbourGrids.length; ++_j) {
+                    var _isAlreadyAdded = _nonEmptyNeighbourGrids.some(function(neighbourGrid) {
+                        return neighbourGrid.x ==_nonEmptySecondTierNeighbourGrids[_j].x 
+                        && neighbourGrid.y == _nonEmptySecondTierNeighbourGrids[_j].y;
+                    });
+
+                    if (!_isAlreadyAdded) {
+                        _nonEmptyNeighbourGrids.push(_nonEmptySecondTierNeighbourGrids[_j]);
+                    }
+                }
+            }
+
+            return _nonEmptyNeighbourGrids;
         }
 
         function _pushBubbles(center) {
             var _grid = MathExtends.screenToGrid(center, _hexagonSize);
-            var _neighbourGridOffsets = _getDoubleNeighboursFor(_grid);
+            var _neighbourGrids = _getConnectedDoubledNonEmptyNeighboursFor(_grid);
 
-            for (var _i = 0; _i < _neighbourGridOffsets.length; ++_i) {
-                var _neighbourGrid = new Point(_grid.x + _neighbourGridOffsets[_i].x,
-                    _grid.y + _neighbourGridOffsets[_i].y);
+            for (var _i = 0; _i < _neighbourGrids.length; ++_i) {
+                var _neighbourGrid = _neighbourGrids[_i];
                 var _slotIndex = _gridToIndex(_neighbourGrid);
-                
-                console.log("Pushing (" + _grid.x + ", " + _grid.y + ")");
 
-                if (_isValidGridLocation(_neighbourGrid) && _bubbleSlots[_slotIndex].bubble) {
-                    var _neighbourScreen = MathExtends.gridToScreen(_neighbourGrid, _hexagonSize);
-                    var _pushingDir = new Vec2D({ x: _neighbourScreen.x - center.x, y: _neighbourScreen.y - center.y })
-                        .getUnitVector();
-                    var _pushingDestOffset = _pushingDir.multiply(BUBBLE_PUSHING_DIST);
-                    var _pushingDest = new Point(_neighbourScreen.x + _pushingDestOffset.x, 
-                        _neighbourScreen.y + _pushingDestOffset.y);
+                var _neighbourScreen = MathExtends.gridToScreen(_neighbourGrid, _hexagonSize);
+                var _pushingDir = new Vec2D({ x: _neighbourScreen.x - center.x, y: _neighbourScreen.y - center.y })
+                    .getUnitVector();
+                var _pushingDestOffset = _pushingDir.multiply(BUBBLE_PUSHING_DIST);
+                var _pushingDest = new Point(_neighbourScreen.x + _pushingDestOffset.x, 
+                    _neighbourScreen.y + _pushingDestOffset.y);
 
-                    _bubbleSlots[_slotIndex].bubble.moveTo(_pushingDest, BUBBLE_PUSHING_TIME, true, animate.easeOut);
-                    _bubbleSlots[_slotIndex].bubble.moveTo(_neighbourScreen, BUBBLE_PUSHING_TIME, false, animate.easeIn);
-                }
+                _bubbleSlots[_slotIndex].bubble.moveTo(_pushingDest, BUBBLE_PUSHING_TIME, true, animate.easeOut);
+                _bubbleSlots[_slotIndex].bubble.moveTo(_neighbourScreen, BUBBLE_PUSHING_TIME, false, animate.easeIn);
             }
         }
 
@@ -439,8 +425,6 @@ exports = Class(View, function (supr) {
                     _remainingBubbleCount++;
 
                     if (_grid.y < _bubbleSlotRows) {
-                        console.log(_shotBubble.getTag() + " stays at (" + _grid.x + ", " + _grid.y + ")");
-
                         var _chainedBubbles = [];
                         var _droppingBubbles = [];
 

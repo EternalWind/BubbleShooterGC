@@ -165,8 +165,6 @@ exports = Class(ImageView, function (supr) {
                 _lastWaypoint = _target;
             }
 
-            console.log("Is sticking: " + _collision.isSticking);
-
             return _bubbleMovement;
         }
 
