@@ -1,5 +1,4 @@
-import ui.ParticleEngine as ParticleEngine;
-
+import src.vfx.ParticleEngine as ParticleEngine;
 import src.vfx.Explosion as Explosion;
 import src.helpers.ParticleImageProvider as ParticleImageProvider;
 import src.helpers.Pool as Pool;

@@ -1,6 +1,5 @@
 import ui.View as View;
 import ui.ImageView as ImageView;
-import ui.ParticleEngine as ParticleEngine;
 import ui.Engine as Engine;
 import math.geom.Vec2D as Vec2D;
 import animate;
