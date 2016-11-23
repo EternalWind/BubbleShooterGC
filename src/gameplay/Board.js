@@ -723,7 +723,7 @@ exports = Class(View, function (supr) {
 
                         for (var _i = 0; _i < _droppingBubbles.length; ++_i) {
                             var _droppingBubble = _droppingBubbles[_i];
-                            _droppingBubble.drop(this.style.height + 50, 900);
+                            _droppingBubble.drop(this.style.height + 50, 1500);
                         }
 
                         _canon.reload(_generateBubble());

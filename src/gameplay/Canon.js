@@ -15,7 +15,7 @@ import src.helpers.PathHelpers as PathHelpers;
 exports = Class(ImageView, function (supr) {
     this.init = function (opts) {
         var _size = 128;
-        var _fireSpeed = 700;
+        var _fireSpeed = 2000;
 
         opts = merge(opts, {
             x: 0,
