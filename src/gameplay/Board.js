@@ -70,6 +70,8 @@ exports = Class(View, function (supr) {
     // The maximum concurrent amount of fireworks in each loop.
     var FIREWORKS_MAX_CONCURRENT_COUNT = 4;
 
+    var MAX_FIRING_ANGLE = 60 * Math.PI / 180;
+
     this.init = function (opts) {
         opts = merge(opts, {
             x: 0,
@@ -660,6 +662,10 @@ exports = Class(View, function (supr) {
             }
         }
 
+        function _isFiringDirectionValid(dir) {
+            return Math.abs((dir.getAngle() + Math.PI / 2)) <= MAX_FIRING_ANGLE;
+        }
+
         /**
             Fires the canon.
             @param input The point in screen coordinate where the touch input happened.
@@ -668,6 +674,9 @@ exports = Class(View, function (supr) {
             if (_canon.canShoot()) {
                 var _canonPos = _canon.getPosition();
                 var _dir = new Vec2D({ x: input.x - _canonPos.x, y: input.y - _canonPos.y }).getUnitVector();
+
+                // Checks if the canon is pointing to an invalid angle.
+                if (!_isFiringDirectionValid(_dir)) return;
 
                 _canon.fire(_dir, _collisionTest, _calibratePosition).then(bind(this, function() {
                     var _shotBubble = _canon.getCurrentBubble();
