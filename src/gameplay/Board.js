@@ -70,7 +70,11 @@ exports = Class(View, function (supr) {
     // The maximum concurrent amount of fireworks in each loop.
     var FIREWORKS_MAX_CONCURRENT_COUNT = 4;
 
+    // The maximum valid firing angle.
     var MAX_FIRING_ANGLE = 60 * Math.PI / 180;
+
+    // The time needs to finish updating the penalty value.
+    var PENALTY_UPDATE_TIME = 25;
 
     this.init = function (opts) {
         opts = merge(opts, {
@@ -164,6 +168,21 @@ exports = Class(View, function (supr) {
             zIndex: 0
         })
 
+        var _headerBarWidth = 249;
+        var _headerBarHeight = 166;
+        var _initialHeaderY = -_headerBarHeight / _headerBarWidth * opts.width;
+        var _headerBar = new ImageView({
+            superview: _elementsRoot,
+            x: 0,
+            y: _initialHeaderY,
+            width: opts.width,
+            height: _headerBarHeight / _headerBarWidth * opts.width,
+            image: PathHelpers.getImgPath("header"),
+            zIndex: 5
+        });
+        
+        var _headerBarAnimator = new animate(_headerBar);
+
         // The canon object.
         var _canon = new Canon({
             superview: _elementsRoot,
@@ -245,6 +264,18 @@ exports = Class(View, function (supr) {
         // The remaining amount of bubbles on the board.
         var _remainingBubbleCount = 0;
 
+        // The current penalty value.
+        var _penalty = 0;
+
+        // The interval between each update of the penalty.
+        var _punishingInterval = 5000;
+
+        // A handle to the timer object that is responsible for updating the penalty.
+        var _penaltyTimer = null;
+
+        // Whether the penalty value is currently being updated or not.
+        var _isUpdatingPenality = false;
+
         /** Public Functions **/
 
         /**
@@ -274,8 +305,13 @@ exports = Class(View, function (supr) {
             _isReady = false;
             _remainingBubbleCount = 0;
 
+            _headerBar.style.y = _initialHeaderY;
+
+            _penalty = 0;
+            _isUpdatingPenality = false;
+
             _loadBubbles();
-            _arrangeBubblesInSlots();
+            _arrangeBubblesInSlots(true);
 
             // Loads two bubbles. One is for the current firing bubble and the other one is for the next firing bubble.
             _canon.reload(_generateBubble());
@@ -295,12 +331,39 @@ exports = Class(View, function (supr) {
             }).wait(1000).then(function() {
                 _goMark.hide();
                 _isReady = true;
+
+                _penaltyTimer = setInterval(bind(this, _updatePenalty), _punishingInterval);
             });
         };
 
         /** End of Public Functions **/
 
         /** Private Functions **/
+
+        /**
+            Updates the penalty value.
+        **/
+        function _updatePenalty() {
+            _penalty += 1;
+            _isUpdatingPenality = true;
+
+            _arrangeBubblesInSlots(false);
+
+            setTimeout(bind(this, function() {
+                _isUpdatingPenality = false;
+
+                var _losingRowIndex = _getLosingRowIndex();
+                if (_losingRowIndex < _bubbleSlotRows) {
+                    for (var _col = 0; _col < _bubbleSlotsPerRow; ++_col) {
+                        var _slotIndex = _gridToIndex(new Point(_col, _losingRowIndex));
+                        if (_bubbleSlots[_slotIndex].bubble) {
+                            _lose();
+                            break;
+                        }
+                    }
+                }
+            }), PENALTY_UPDATE_TIME);
+        }
 
         /**
             Converts an odd-r offset coordinate to a bubble slot index.
@@ -315,17 +378,45 @@ exports = Class(View, function (supr) {
             Calibrates a given position so that position on each edge of the board's two sides can visually be touching the actual edge of the screen.
             This method should only be used for edge positions.
             @param pos The position in screen coordiante.
+            @param col The column index for the given position.
             @param row The row index for the given position.
+            @param isFinalDest Whther the position being calculated is the final destionation or not.
             @returns The calibrated position in screen coordinate.
         **/
-        function _calibratePosition(pos, row) {
-            if (pos.x < _right / 2 && (row & 1) == 1) {
-                pos.x -= _bubbleRadius;
-            } else if (pos.x > _right / 2 && (row & 1) == 0) {
-                pos.x += _bubbleRadius;
+        function _calibratePosition(pos, col, row, isFinalDest) {
+            if (!isFinalDest) {
+                if (col == 0 && (row & 1) == 1) {
+                    pos.x -= _bubbleRadius;
+                } else if (col == _bubbleSlotsPerRow - 1 && (row & 1) == 0) {
+                    pos.x += _bubbleRadius;
+                }
             }
 
+            pos = _applyPenalty(pos);
+
             return pos;
+        }
+
+        /**
+            Applies the penalty part to a given screen coordinate.
+            @param screen The screen coordinate to apply penalty to.
+            @returns The punished screen coordinate.
+        **/
+        function _applyPenalty(screen) {
+            var _result = new Point(screen.x, 
+                screen.y + _penalty * _hexagonVerticalDistance);
+            return _result;
+        }
+
+        /**
+            Removes the penalty part from a gvien screen coordinate.
+            @param punishedScreen The screen coordinate that has penalty.
+            @returns A screen coordinate without the penalty.
+        **/
+        function _removePenalty(punishedScreen) {
+            var _result = new Point(punishedScreen.x,
+                punishedScreen.y - _penalty * _hexagonVerticalDistance);
+            return _result;
         }
 
         /**
@@ -368,16 +459,28 @@ exports = Class(View, function (supr) {
         /**
             Positions the loaded bubbles.
         **/
-        function _arrangeBubblesInSlots() {
+        function _arrangeBubblesInSlots(noAnimation) {
+            var _headerBarPos = new Point(0, _initialHeaderY);
+            _headerBarPos = _applyPenalty(_headerBarPos);
+
+            if (noAnimation)
+                _headerBar.style.y = _headerBarPos.y;
+            else
+                _headerBarAnimator.now({ y: _headerBarPos.y }, PENALTY_UPDATE_TIME, animate.linear);
+
             for (var _row = 0; _row < _bubbleSlotRows; ++_row) {
                 for (var _col = 0; _col < _bubbleSlotsPerRow; ++_col) {
                     var _grid = new Point(_col, _row);
 
                     var _slotIndex = _gridToIndex(_grid);
                     var _screen = MathExtends.gridToScreen(_grid, _hexagonSize);
+                    _screen = _applyPenalty(_screen);
 
                     if (_bubbleSlots[_slotIndex].bubble != null) {
-                        _bubbleSlots[_slotIndex].bubble.setPosition(_screen);
+                        if (noAnimation)
+                            _bubbleSlots[_slotIndex].bubble.setPosition(_screen);
+                        else
+                            _bubbleSlots[_slotIndex].bubble.moveTo(_screen, PENALTY_UPDATE_TIME);
                     }
                 }
             }
@@ -410,6 +513,8 @@ exports = Class(View, function (supr) {
             @returns The collision test result.
         **/
         function _collisionTest(pos, dir) {
+            pos = _removePenalty(pos);
+
             var _grid = MathExtends.screenToGrid(pos, _hexagonSize);
             var _collision = null;
 
@@ -419,6 +524,7 @@ exports = Class(View, function (supr) {
             for (var _i = 0; _i < _neighbours.length; ++_i) {
                 var _neighbourGrid = _neighbours[_i];
                 var _neighbourScreen = MathExtends.gridToScreen(_neighbourGrid, _hexagonSize);
+
                 var _distance = new Line(pos, _neighbourScreen).getLength();
 
                 if (_distance < _bubbleRadius * 2 * _collideThresholdRatio) {
@@ -643,7 +749,7 @@ exports = Class(View, function (supr) {
             @param center The center position in screen coordinate.
         **/
         function _pushBubbles(center) {
-            var _grid = MathExtends.screenToGrid(center, _hexagonSize);
+            var _grid = MathExtends.screenToGrid(_removePenalty(center), _hexagonSize);
             var _neighbourGrids = _getConnectedDoubledNonEmptyNeighboursFor(_grid);
 
             for (var _i = 0; _i < _neighbourGrids.length; ++_i) {
@@ -651,6 +757,8 @@ exports = Class(View, function (supr) {
                 var _slotIndex = _gridToIndex(_neighbourGrid);
 
                 var _neighbourScreen = MathExtends.gridToScreen(_neighbourGrid, _hexagonSize);
+                _neighbourScreen = _applyPenalty(_neighbourScreen);
+
                 var _pushingDir = new Vec2D({ x: _neighbourScreen.x - center.x, y: _neighbourScreen.y - center.y })
                     .getUnitVector();
                 var _pushingDestOffset = _pushingDir.multiply(BUBBLE_PUSHING_DIST);
@@ -662,8 +770,22 @@ exports = Class(View, function (supr) {
             }
         }
 
+        /**
+            Whether a given direction is a valid firing direction.
+            @param dir The firing direction to test.
+            @returns Whether the canon can point towards this direction or not
+        **/
         function _isFiringDirectionValid(dir) {
             return Math.abs((dir.getAngle() + Math.PI / 2)) <= MAX_FIRING_ANGLE;
+        }
+
+        /**
+            Calculates the bottom line's row index that makes the player loses the game
+            if there are any bubbles in that row.
+            @returns The bottom line's row index.
+        **/
+        function _getLosingRowIndex() {
+            return _bubbleSlotRows - _penalty;
         }
 
         /**
@@ -671,7 +793,7 @@ exports = Class(View, function (supr) {
             @param input The point in screen coordinate where the touch input happened.
         **/
         function _fireCanon(input) {
-            if (_canon.canShoot()) {
+            if (_canon.canShoot() && !_isUpdatingPenality) {
                 var _canonPos = _canon.getPosition();
                 var _dir = new Vec2D({ x: input.x - _canonPos.x, y: input.y - _canonPos.y }).getUnitVector();
 
@@ -680,12 +802,12 @@ exports = Class(View, function (supr) {
 
                 _canon.fire(_dir, _collisionTest, _calibratePosition).then(bind(this, function() {
                     var _shotBubble = _canon.getCurrentBubble();
-                    var _grid = MathExtends.screenToGrid(_shotBubble.getPosition(), 
+                    var _grid = MathExtends.screenToGrid(_removePenalty(_shotBubble.getPosition()), 
                     _hexagonSize);
 
                     _remainingBubbleCount++;
 
-                    if (_grid.y < _bubbleSlotRows) {
+                    if (_grid.y < _getLosingRowIndex()) {
                         var _chainedBubbles = [];
                         var _droppingBubbles = [];
 
@@ -759,11 +881,13 @@ exports = Class(View, function (supr) {
         function _win() {
             _winMark.show();
             _winMark.updateOpts({ opacity: 0 });
-            _winMarkAnimator.now({ opacity: 1 }, 2000);
+            _winMarkAnimator.now({ opacity: 1 }, 500);
 
             _showFireworks();
 
             _hasWon = true;
+
+            clearInterval(_penaltyTimer);
         }
 
         /**
@@ -772,9 +896,11 @@ exports = Class(View, function (supr) {
         function _lose() {
             _loseMark.show();
             _loseMark.updateOpts({ opacity: 0 });
-            _loseMarkAnimator.now({ opacity: 1 }, 2000);
+            _loseMarkAnimator.now({ opacity: 1 }, 500);
 
             _hasLost = true;
+
+            clearInterval(_penaltyTimer);
         }
 
         /** End of Private Functions **/

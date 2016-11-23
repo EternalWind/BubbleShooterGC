@@ -133,6 +133,8 @@ exports = Class(ImageView, function (supr) {
             _currentBubble = null;
             _nextBubble = null;
             _canShoot = false;
+
+            _barrel.updateOpts({ r: 0 });
         }
 
         /**
@@ -166,10 +168,9 @@ exports = Class(ImageView, function (supr) {
             var _collision = _bubbleMarching(_currentWaypoint, dir, _hexagonWidth / 2, collisionTest);
             var _screenPos = MathExtends.gridToScreen(_collision.grid,
                 _hexagonSize);
+            _screenPos = calibratePos(_screenPos, _collision.grid.x,
+                _collision.grid.y, _collision.isSticking);
 
-            if (!_collision.isSticking) {
-                _screenPos = calibratePos(_screenPos, _collision.grid.y);
-            }
             _waypoints.push(_screenPos);
 
             var _nextWaypoint = _waypoints[_waypoints.length - 1];
@@ -184,9 +185,8 @@ exports = Class(ImageView, function (supr) {
                 _currentWaypoint = _nextWaypoint;
 
                 _screenPos = MathExtends.gridToScreen(_collision.grid, _hexagonSize);
-                if (!_collision.isSticking) {
-                    _screenPos = calibratePos(_screenPos, _collision.grid.y);
-                }
+                _screenPos = calibratePos(_screenPos, _collision.grid.x,
+                    _collision.grid.y, _collision.isSticking);
 
                 _waypoints.push(_screenPos);
 
@@ -209,7 +209,11 @@ exports = Class(ImageView, function (supr) {
                 _lastWaypoint = _target;
             }
 
-            return _bubbleMovement;
+            return _bubbleMovement.then(function() {
+                _currentBubble.setPosition(calibratePos(
+                    MathExtends.gridToScreen(_collision.grid, _hexagonSize),
+                    _collision.grid.x, _collision.grid.y, _collision.isSticking));
+            });
         }
 
         /**
